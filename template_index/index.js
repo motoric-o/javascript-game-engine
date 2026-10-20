@@ -1,5 +1,5 @@
 // 2472041 - Rico Dharmawan
-import GameObject from "../lib/engine/object.js";
+import GameObject from "./lib/engine/object.js";
 import GameEngine from "./lib/engine/GameEngine.js";
 import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
 import { createFillInfo } from "./lib/util/createFillInfo.js";
