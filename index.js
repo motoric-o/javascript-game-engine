@@ -1,99 +1,75 @@
 // 2472041 - Rico Dharmawan
-import GameObject from "../lib/engine/object.js";
-import GameEngine from "./lib/engine/GameEngine.js";
 import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
-import createFillInfo from "./lib/util/createFillInfo.js";
+import { toRad } from "./lib/util/math.js";
+import MatrixClass from "./lib/util/matrix.js";
+import GraphicsLib from "./lib/graphics/graphicsLib.js";
 
-let angle = 0;
+let canvas_handler = document.querySelector("#mycanvas");
+let context = canvas_handler.getContext("2d", { willReadFrequently: true });
+// const engine = new GameEngine(1280, 720, 2);
+const theta = toRad(15);
+const k = 1 / (Math.cos(theta) + Math.sin(theta))
+const matrix = new MatrixClass();
+const graphics = new GraphicsLib(context, canvas_handler);
 
-const engine = new GameEngine(500, 500, 2);
+let square_vertices = [
+    Vector2(100, 100),
+    Vector2(100, 400),
+    Vector2(400, 400),
+    Vector2(400, 100)
+];
 
-const gun = new GameObject()
-    .setName("Gun")
-    .setVertices([
-        Vector2(-25, 10),
-        Vector2(25, 10),
-        Vector2(25, -10),
-        Vector2(-25, -10)
-    ])
-    .setPosition(Vector2(55, 465))
-    .setFill(createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0)));
+graphics.Shapes.polygon(square_vertices, Color(0, 0, 0));
+graphics.Coloring.floodFill(Vector2(250, 250), Color(0, 0, 150));
 
-engine.addObject(gun, 1);
+for (let i = 0; i < 11; i++) {
+    const scale = matrix.create_fixedp_scale(250, 250, k, k);
+    const rotation = matrix.create_fixedp_rotation(250, 250, toRad(15));
 
-engine.start();
+    const transformation = matrix.multiply(rotation, scale);
+    square_vertices = graphics.Transform.transform_multiple(square_vertices, transformation)
+    graphics.Shapes.polygon(square_vertices, Color(0, 0, 0));
 
-function rotasi_fp(e) {
-    let mouseX = e.offsetX;
-    let mouseY = e.offsetY;
-
-    const gun_anchor = gun.position;
-
-    angle = Math.atan2(gun_anchor.y - mouseY, gun_anchor.x - mouseX) + Math.PI - (2 * Math.PI);
-
-    gun.updateRotation(angle);
-}
-
-function ricochet(obj, delta) {
-    const collision = obj.getCollision()
-    const collided = obj.checkCollision(collision);
-    if (collided) {
-        let vx = obj.velocity.x;
-        let vy = obj.velocity.y;
-
-        if (collision.right || collision.left) {
-            vx *= -1;
-        }
-
-        if (collision.top || collision.bottom) {
-            vy *= -1;
-        }
-
-        if (obj.custom_attributes.ricochet_count < 2) {
-            obj.setVelocity(Vector2(vx, vy));
-            obj.custom_attributes.ricochet_count += 1;
-        } else {
-            if (obj.custom_attributes.accumulated == 0) {
-                obj.setVelocity(Vector2(vx * 0.3, vy * 0.3));
-                obj.custom_attributes.ricochet_count += 1;
-                obj.custom_attributes.accumulated += delta;
-            }
-        }
-    }
-
-    if (obj.custom_attributes.ricochet_count > 2) {
-        if (obj.custom_attributes.accumulated > 0.1) {
-            obj.destroy();
-        }
-
-        obj.custom_attributes.accumulated += delta;
+    if (i % 2 == 0) {
+        graphics.Coloring.floodFill(Vector2(250, 250), Color(255, 150, 0));
+    } else {
+        graphics.Coloring.floodFill(Vector2(250, 250), Color(0, 0, 150));
     }
 }
 
-function tembak(e) {
-    let x = gun.position.x + 25 * Math.cos(angle);
-    let y = gun.position.y + 25 * Math.sin(angle);
+graphics.Coloring.floodFill(Vector2(250, 250), Color(255, 0, 0));
 
-    let vx = 750 * Math.cos(angle);
-    let vy = 750 * Math.sin(angle);
 
-    const bullet = new GameObject()
-        .setName("bullet")
-        .setVertices([
-            Vector2(0, 0)
-        ])
-        .setRadius(5)
-        .setColor(Color(255, 0, 0))
-        .setPosition(Vector2(x, y))
-        .setVelocity(Vector2(vx, vy))
-        .setFill(createFillInfo("BF", [Color(255, 0, 0), Color(255, 0, 0)], Vector2(0, 0)))
-        .addAttribute("ricochet_count", 0)
-        .addAttribute("accumulated", 0)
-        .bindToUpdate(ricochet);
 
-    engine.addDebris(bullet, 0, 10);
-}
+graphics.putImageData()
 
-engine.mainCanvas.addEventListener('mousemove', rotasi_fp);
+// const square = new GameObject()
+//     .setName('Square0')
+//     .setVertices([
+//         Vector2(-50, -50),
+//         Vector2(-50, 50),
+//         Vector2(50, 50),
+//         Vector2(50, -50)
+//     ])
+//     .setRotation(theta)
+//     .setPosition(getScreenCentroid(engine.width, engine.height))
+//     .setColor(Color(255, 0, 0))
+//     .setFill(createFillInfo("BF", [Color(255, 0, 0), Color(255, 0, 0)], Vector2(0, 0)));
 
-engine.mainCanvas.addEventListener('click', tembak);
+// const square2 = new GameObject()
+//     .setName('Square1')
+//     .setVertices([
+//         Vector2(-50, -50),
+//         Vector2(-50, 50),
+//         Vector2(50, 50),
+//         Vector2(50, -50)
+//     ])
+//     .setPosition(getScreenCentroid(engine.width, engine.height))
+//     .setColor(Color(0, 0, 0))
+//     .setFill(createFillInfo("BF", [Color(0, 0, 255), Color(0, 0, 0)], Vector2(0, 0)));
+
+// engine.addStaticObject(square2, 0);
+
+// const transformation = square.getTransformation();
+// const scale = matrix.create_scale(theta, theta);
+// square2.setTransformation(matrix.multiply(transformation, scale))
