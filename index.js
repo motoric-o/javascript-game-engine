@@ -36,10 +36,10 @@ const carBody = new GameObject()
 const window = new GameObject()
     .setName('CarWindow')
     .setVertices([
-        Vector2(-95, 24),
+        Vector2(-90, 24),
         Vector2(-70, -24),
         Vector2(70, -24),
-        Vector2(95, 24),
+        Vector2(90, 24),
     ])
     .setLocalPosition(Vector2(0, -60))
     .setColor(Color(0, 0, 0))
@@ -54,7 +54,8 @@ const rearTire = new GameObject()
 engine.addStaticObject(road, 0);
 engine.addObject(carBody, 1);
 
-// carBody.setAngVelocity(1)
-carBody.setScale(10)
+carBody.setAngVelocity(1)
+carBody.setScale(Vector2(2, 2))
+// window.setAngVelocity();
 
 // engine.addObject(window, 1);
