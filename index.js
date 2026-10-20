@@ -1,75 +1,53 @@
 // 2472041 - Rico Dharmawan
+import GameObject from "./lib/engine/object.js";
+import GameEngine from "./lib/engine/GameEngine.js";
 import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
-import { toRad } from "./lib/util/math.js";
-import MatrixClass from "./lib/util/matrix.js";
-import GraphicsLib from "./lib/graphics/graphicsLib.js";
+import { createFillInfo } from "./lib/util/graphics.js";
 
-let canvas_handler = document.querySelector("#mycanvas");
-let context = canvas_handler.getContext("2d", { willReadFrequently: true });
-// const engine = new GameEngine(1280, 720, 2);
-const theta = toRad(15);
-const k = 1 / (Math.cos(theta) + Math.sin(theta))
-const matrix = new MatrixClass();
-const graphics = new GraphicsLib(context, canvas_handler);
+const engine = new GameEngine(1280, 720, 2);
 
-let square_vertices = [
-    Vector2(100, 100),
-    Vector2(100, 400),
-    Vector2(400, 400),
-    Vector2(400, 100)
-];
+engine.start();
 
-graphics.Shapes.polygon(square_vertices, Color(0, 0, 0));
-graphics.Coloring.floodFill(Vector2(250, 250), Color(0, 0, 150));
+const road = new GameObject()
+    .setName('Road')
+    .setVertices([
+        Vector2(0, 600),
+        Vector2(1280, 600)
+    ])
+    .setColor(Color(0, 0, 0))
 
-for (let i = 0; i < 11; i++) {
-    const scale = matrix.create_fixedp_scale(250, 250, k, k);
-    const rotation = matrix.create_fixedp_rotation(250, 250, toRad(15));
+const carBody = new GameObject()
+    .setName('CarBody')
+    .setVertices([
+        Vector2(-150, -37),
+        Vector2(-100, -37),
+        Vector2(-75, -90),
+        Vector2(75, -90),
+        Vector2(100, -37),
+        Vector2(150, -37),
+        Vector2(150, 37),
+        Vector2(-150, 37)
+    ])
+    .setColor(Color(0, 0, 0))
+    .setFill(createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(0, 0)))
+    .setPosition(Vector2(200, 500))
+    .isActive(true);
 
-    const transformation = matrix.multiply(rotation, scale);
-    square_vertices = graphics.Transform.transform_multiple(square_vertices, transformation)
-    graphics.Shapes.polygon(square_vertices, Color(0, 0, 0));
+const window = new GameObject()
+    .setName('CarWindow')
+    .setVertices([
+        Vector2(-95, -37),
+        Vector2(-70, -85),
+        Vector2(70, -85),
+        Vector2(95, -37),
+    ])
+    .setColor(Color(0, 0, 0))
+    .setFill(createFillInfo("BF", [Color(100, 150, 250), Color(0, 0, 0)], Vector2(0, 0)))
+    .setPosition(Vector2(200, 500))
 
-    if (i % 2 == 0) {
-        graphics.Coloring.floodFill(Vector2(250, 250), Color(255, 150, 0));
-    } else {
-        graphics.Coloring.floodFill(Vector2(250, 250), Color(0, 0, 150));
-    }
-}
+carBody.addChild(window)
+    
+engine.addStaticObject(road, 0);
+engine.addObject(carBody, 1);
 
-graphics.Coloring.floodFill(Vector2(250, 250), Color(255, 0, 0));
-
-
-
-graphics.putImageData()
-
-// const square = new GameObject()
-//     .setName('Square0')
-//     .setVertices([
-//         Vector2(-50, -50),
-//         Vector2(-50, 50),
-//         Vector2(50, 50),
-//         Vector2(50, -50)
-//     ])
-//     .setRotation(theta)
-//     .setPosition(getScreenCentroid(engine.width, engine.height))
-//     .setColor(Color(255, 0, 0))
-//     .setFill(createFillInfo("BF", [Color(255, 0, 0), Color(255, 0, 0)], Vector2(0, 0)));
-
-// const square2 = new GameObject()
-//     .setName('Square1')
-//     .setVertices([
-//         Vector2(-50, -50),
-//         Vector2(-50, 50),
-//         Vector2(50, 50),
-//         Vector2(50, -50)
-//     ])
-//     .setPosition(getScreenCentroid(engine.width, engine.height))
-//     .setColor(Color(0, 0, 0))
-//     .setFill(createFillInfo("BF", [Color(0, 0, 255), Color(0, 0, 0)], Vector2(0, 0)));
-
-// engine.addStaticObject(square2, 0);
-
-// const transformation = square.getTransformation();
-// const scale = matrix.create_scale(theta, theta);
-// square2.setTransformation(matrix.multiply(transformation, scale))
+// engine.addObject(window, 1);
