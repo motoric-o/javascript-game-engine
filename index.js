@@ -1,49 +1,40 @@
 // 2472041 - Rico Dharmawan
-import { GameObject } from "../lib/engine/object.js";
-import { GameEngine } from "./lib/engine/GameEngine.js";
+import GameObject from "../lib/engine/object.js";
+import GameEngine from "./lib/engine/GameEngine.js";
+import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
+import createFillInfo from "./lib/util/createFillInfo.js";
 
-// let canvas_handler = document.querySelector("#mycanvas");
-// let context = canvas_handler.getContext("2d", { willReadFrequently: true });
 let angle = 0;
 
 const engine = new GameEngine(500, 500, 2);
 
-engine.start()
+const gun = new GameObject()
+    .setName("Gun")
+    .setVertices([
+        Vector2(-25, 10),
+        Vector2(25, 10),
+        Vector2(25, -10),
+        Vector2(-25, -10)
+    ])
+    .setPosition(Vector2(55, 465))
+    .setFill(createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0)));
 
-// const GrafLib = new graphicsLib(context, canvas_handler);
-// const engine = new PhysicsEngine(1 / 60, GrafLib);
+engine.addObject(gun, 1);
 
-// const gun_center = GrafLib.getCentroid([
-//     GrafLib.Util.Vector2(30, 475),
-//     GrafLib.Util.Vector2(80, 475),
-//     GrafLib.Util.Vector2(80, 455),
-//     GrafLib.Util.Vector2(30, 455)
-// ]);
-// const gun = new GameObject(GrafLib)
-//     .setName("Gun")
-//     .setVertices([
-//         GrafLib.Util.Vector2(-25, 10),
-//         GrafLib.Util.Vector2(25, 10),
-//         GrafLib.Util.Vector2(25, -10),
-//         GrafLib.Util.Vector2(-25, -10)
-//     ])
-//     .setPosition(gun_center)
-//     .setFill(GrafLib.Coloring.createFillInfo("BF", [GrafLib.Util.Color(150, 150, 150), GrafLib.Util.Color(0, 0, 0)], GrafLib.Util.Vector2(0, 0)));
+engine.start();
 
-// engine.addObject(gun, 1);
+// console.log(engine.Layer.getStack())
 
-// engine.start();
+function rotasi_fp(e) {
+    let mouseX = e.offsetX;
+    let mouseY = e.offsetY;
 
-// function rotasi_fp(e) {
-//     let mouseX = e.offsetX;
-//     let mouseY = e.offsetY;
+    const gun_anchor = gun.position;
 
-//     const gun_anchor = gun.position;
+    angle = Math.atan2(gun_anchor.y - mouseY, gun_anchor.x - mouseX) + Math.PI - (2 * Math.PI);
 
-//     angle = Math.atan2(gun_anchor.y - mouseY, gun_anchor.x - mouseX) + Math.PI - (2 * Math.PI);
-
-//     gun.updateRotation(angle);
-// }
+    gun.updateRotation(angle);
+}
 
 // function ricochet(obj, delta) {
 //     const collision = obj.getCollision()
@@ -51,7 +42,7 @@ engine.start()
 //     if (collided) {
 //         let vx = obj.velocity.x;
 //         let vy = obj.velocity.y;
-        
+
 //         if (collision.right || collision.left) {
 //             vx *= -1;
 //         }
@@ -105,6 +96,6 @@ engine.start()
 //     engine.addDebris(bullet, 0, 10);
 // }
 
-// canvas_handler.addEventListener('mousemove', rotasi_fp);
+engine.mainCanvas.addEventListener('mousemove', rotasi_fp);
 
 // canvas_handler.addEventListener('click', tembak);
