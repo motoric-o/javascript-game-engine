@@ -23,8 +23,6 @@ engine.addObject(gun, 1);
 
 engine.start();
 
-// console.log(engine.Layer.getStack())
-
 function rotasi_fp(e) {
     let mouseX = e.offsetX;
     let mouseY = e.offsetY;
@@ -36,66 +34,66 @@ function rotasi_fp(e) {
     gun.updateRotation(angle);
 }
 
-// function ricochet(obj, delta) {
-//     const collision = obj.getCollision()
-//     const collided = obj.checkCollision(collision);
-//     if (collided) {
-//         let vx = obj.velocity.x;
-//         let vy = obj.velocity.y;
+function ricochet(obj, delta) {
+    const collision = obj.getCollision()
+    const collided = obj.checkCollision(collision);
+    if (collided) {
+        let vx = obj.velocity.x;
+        let vy = obj.velocity.y;
 
-//         if (collision.right || collision.left) {
-//             vx *= -1;
-//         }
+        if (collision.right || collision.left) {
+            vx *= -1;
+        }
 
-//         if (collision.top || collision.bottom) {
-//             vy *= -1;
-//         }
+        if (collision.top || collision.bottom) {
+            vy *= -1;
+        }
 
-//         if (obj.custom_attributes.ricochet_count < 2) {
-//             obj.setVelocity(GrafLib.Util.Vector2(vx, vy));
-//             obj.custom_attributes.ricochet_count += 1;
-//         } else {
-//             if (obj.custom_attributes.accumulated == 0) {
-//                 obj.setVelocity(GrafLib.Util.Vector2(vx * 0.3, vy * 0.3));
-//                 obj.custom_attributes.ricochet_count += 1;
-//                 obj.custom_attributes.accumulated += delta;
-//             }
-//         }
-//     }
+        if (obj.custom_attributes.ricochet_count < 2) {
+            obj.setVelocity(Vector2(vx, vy));
+            obj.custom_attributes.ricochet_count += 1;
+        } else {
+            if (obj.custom_attributes.accumulated == 0) {
+                obj.setVelocity(Vector2(vx * 0.3, vy * 0.3));
+                obj.custom_attributes.ricochet_count += 1;
+                obj.custom_attributes.accumulated += delta;
+            }
+        }
+    }
 
-//     if (obj.custom_attributes.ricochet_count > 2) {
-//         if (obj.custom_attributes.accumulated > 0.1) {
-//             obj.destroy();
-//         }
+    if (obj.custom_attributes.ricochet_count > 2) {
+        if (obj.custom_attributes.accumulated > 0.1) {
+            obj.destroy();
+        }
 
-//         obj.custom_attributes.accumulated += delta;
-//     }
-// }
+        obj.custom_attributes.accumulated += delta;
+    }
+}
 
-// function tembak(e) {
-//     let x = gun.position.x + 25 * Math.cos(angle);
-//     let y = gun.position.y + 25 * Math.sin(angle);
+function tembak(e) {
+    let x = gun.position.x + 25 * Math.cos(angle);
+    let y = gun.position.y + 25 * Math.sin(angle);
 
-//     let vx = 750 * Math.cos(angle);
-//     let vy = 750 * Math.sin(angle);
+    let vx = 750 * Math.cos(angle);
+    let vy = 750 * Math.sin(angle);
 
-//     const bullet = new GameObject(GrafLib)
-//         .setName("bullet")
-//         .setVertices([
-//             GrafLib.Util.Vector2(0, 0)
-//         ])
-//         .setRadius(5)
-//         .setColor(GrafLib.Util.Color(255, 0, 0))
-//         .setPosition(GrafLib.Util.Vector2(x, y))
-//         .setVelocity(GrafLib.Util.Vector2(vx, vy))
-//         .setFill(GrafLib.Coloring.createFillInfo("BF", [GrafLib.Util.Color(255, 0, 0), GrafLib.Util.Color(255, 0, 0)], GrafLib.Util.Vector2(0, 0)))
-//         .addAttribute("ricochet_count", 0)
-//         .addAttribute("accumulated", 0)
-//         .bindToUpdate(ricochet);
+    const bullet = new GameObject()
+        .setName("bullet")
+        .setVertices([
+            Vector2(0, 0)
+        ])
+        .setRadius(5)
+        .setColor(Color(255, 0, 0))
+        .setPosition(Vector2(x, y))
+        .setVelocity(Vector2(vx, vy))
+        .setFill(createFillInfo("BF", [Color(255, 0, 0), Color(255, 0, 0)], Vector2(0, 0)))
+        .addAttribute("ricochet_count", 0)
+        .addAttribute("accumulated", 0)
+        .bindToUpdate(ricochet);
 
-//     engine.addDebris(bullet, 0, 10);
-// }
+    engine.addDebris(bullet, 0, 10);
+}
 
 engine.mainCanvas.addEventListener('mousemove', rotasi_fp);
 
-// canvas_handler.addEventListener('click', tembak);
+engine.mainCanvas.addEventListener('click', tembak);
