@@ -113,4 +113,8 @@ engine.addObject(carBody);
 // window.setAngVelocity();
 // carBody.setVelocity(Vector2(25, 0));
 
+// setInterval(function() {
+//     console.log(frontRim.rotation)
+// }, 100)
+
 // engine.addObject(window, 1);
