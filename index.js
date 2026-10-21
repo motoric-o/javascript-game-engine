@@ -108,13 +108,5 @@ carBody.addChild(frontTire);
 engine.addStaticObject(road);
 engine.addObject(carBody);
 
-// carBody.setAngVelocity(1)
-// carBody.setScale(Vector2(2, 2))
-// window.setAngVelocity();
-// carBody.setVelocity(Vector2(25, 0));
 
-// setInterval(function() {
-//     console.log(frontRim.rotation)
-// }, 100)
-
-// engine.addObject(window, 1);
+carBody.setVelocity(Vector2(100, 0));
