@@ -32,7 +32,7 @@ const carBody = new GameObject()
     ])
     .setColor(Color(0, 0, 0))
     .setFill(createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(0, 0)))
-    .setPosition(Vector2(200, 525))
+    .setPosition(Vector2(-50, 525))
     .isActive(true)
     .setLayer(1);
 
@@ -108,5 +108,5 @@ carBody.addChild(frontTire);
 engine.addStaticObject(road);
 engine.addObject(carBody);
 
-
-carBody.setVelocity(Vector2(100, 0));
+carBody.setAngVelocity(5);
+// carBody.setVelocity(Vector2(100, 0));
