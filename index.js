@@ -5,116 +5,92 @@ import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
 import { createFillInfo } from "./lib/util/graphics.js";
 import { toRad } from "./lib/util/math.js";
 
-const engine = new GameEngine(1280, 720, 4);
+const engine = new GameEngine(1280, 720, 2);
+const waveDetail = 55;
+const waveCount = 0.025;
+const amplitude = 10;
 
 engine.start();
 
-const road = new GameObject()
-    .setName('Road')
-    .setVertices([
-        Vector2(0, 600),
-        Vector2(1280, 600)
-    ])
-    .setColor(Color(0, 0, 0))
-    .setLayer(0);
+function wave(self, delta, time) {
+    const start = -engine.width / 2;
+    const end = engine.width / 2;
+    const gap = engine.width / waveDetail;
 
-const carBody = new GameObject()
-    .setName('CarBody')
+    let vertices = [];
+
+    for (let x = start; x <= end; x+=gap) {
+        let y = amplitude * Math.sin(waveCount * x - 2 * time) - 20;
+
+        vertices.push(Vector2(x, y));
+    }
+
+    vertices.push(Vector2(end, 120))
+    vertices.push(Vector2(start, 120))
+    
+    ocean.setVertices(vertices)
+}
+
+const ocean = new GameObject()
+    .setName("ocean")
     .setVertices([
-        Vector2(-150, -37),
-        Vector2(-100, -37),
-        Vector2(-75, -90),
-        Vector2(75, -90),
-        Vector2(100, -37),
-        Vector2(150, -37),
-        Vector2(150, 37),
-        Vector2(-150, 37)
+        Vector2(-640, -20),
+        Vector2(640, -20)
     ])
     .setColor(Color(0, 0, 0))
     .setFills([
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-140, -25)),
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-140, 27)),
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(140, -25)),
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(140, 27)),
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-65, -78)),
-        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(65, -78))
+        createFillInfo("BF", [Color(200, 255, 255), Color(0, 0, 0)], Vector2(0, 20))
     ])
-    .setPosition(Vector2(-50, 525))
-    .setPosition(Vector2(-50, 360))
-    .isActive(true)
+    .setLayer(0)
+    .setPosition(Vector2(640, 600))
+    .bindToUpdate(wave);
+
+const raft = new GameObject()
+    .setName("raft")
+    .setVertices([
+        Vector2(-150, -15),
+        Vector2(150, -15),
+        Vector2(150, 15),
+        Vector2(-150, 15)
+    ])
+    .setColor(Color(0, 0, 0))
+    .setFills([
+        createFillInfo("BF", [Color(150, 100, 25), Color(0, 0, 0)], Vector2(0, 0))
+    ])
+    .setLayer(1)
+    .setPosition(Vector2(640, 575));
+
+const pole = new GameObject()
+    .setName("pole")
+    .setVertices([
+        Vector2(-10, 125),
+        Vector2(10, 125),
+        Vector2(10, -125),
+        Vector2(-10, -125)
+    ])
+    .setColor(Color(0, 0, 0))
+    .setFills([
+        createFillInfo("BF", [Color(100, 50, 30), Color(0, 0, 0)], Vector2(0, 0))
+    ])
+    .setLocalPosition(Vector2(0, -140))
     .setLayer(1);
 
-const window = new GameObject()
-    .setName('CarWindow')
+const flag = new GameObject()
+    .setName("flag")
     .setVertices([
-        Vector2(-90, 24),
-        Vector2(-70, -24),
-        Vector2(70, -24),
-        Vector2(90, 24),
+        Vector2(-50, -20),
+        Vector2(-50, 20),
+        Vector2(50, 0)
     ])
-    .setLocalPosition(Vector2(0, -60))
     .setColor(Color(0, 0, 0))
-    .setFills([createFillInfo("BF", [Color(100, 150, 250), Color(0, 0, 0)], Vector2(0, 0))])
+    .setFills([
+        createFillInfo("BF", [Color(255, 0, 0), Color(0, 0, 0)], Vector2(0, 0))
+    ])
+    .setLocalPosition(Vector2(60, -90))
     .setLayer(1);
 
-    
-    const rearTire = new GameObject()
-    .setName('rearTire')
-    .setVertices(Vector2(0, 0))
-    .setRadius(40)
-    .setAngVelocity(5)
-    .setColor(Color(0, 0, 0))
-    .setLocalPosition(Vector2(-85, 35))
-    .setFills([createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0))])
-    .setLayer(2);
-    
-    const frontTire = new GameObject()
-    .setName('frontTire')
-    .setVertices(Vector2(0, 0))
-    .setRadius(40)
-    .setAngVelocity(5)
-    .setColor(Color(0, 0, 0))
-    .setLocalPosition(Vector2(85, 35))
-    .setFills([createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0))])
-    .setLayer(2);
-    
-    const rearRim = new GameObject()
-    .setName('rearRim')
-    .setVertices([
-        Vector2(0, 0),
-        Vector2(0, -20),
-        Vector2(0, 20),
-        Vector2(0, 0),
-        Vector2(-20, 0),
-        Vector2(20, 0)
-    ])
-    .setColor(Color(0, 0, 0))
-    .setLayer(3)
-    .setLocalPosition(Vector2(0, 0));
-    
-    const frontRim = new GameObject()
-    .setName('frontRim')
-    .setVertices([
-        Vector2(0, 0),
-        Vector2(0, -20),
-        Vector2(0, 20),
-        Vector2(0, 0),
-        Vector2(-20, 0),
-        Vector2(20, 0),
-    ])
-    .setColor(Color(0, 0, 0))
-    .setLayer(3)
-    .setLocalPosition(Vector2(0, 0));
-    
+pole.addChild(flag);
+raft.addChild(pole);
 
-carBody.addChild(window)
-rearTire.addChild(rearRim);
-frontTire.addChild(frontRim);
-
-carBody.addChild(rearTire);
-carBody.addChild(frontTire);
-    
-engine.addStaticObject(road);
-engine.addObject(carBody);
-
-carBody.setVelocity(Vector2(100, 0));
+engine.addObject(ocean);
+engine.addObject(raft);
