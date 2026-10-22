@@ -28,7 +28,12 @@ function wave(self, delta, time) {
     vertices.push(Vector2(end, 120))
     vertices.push(Vector2(start, 120))
     
-    ocean.setVertices(vertices)
+    self.setVertices(vertices)
+}
+
+function raft_rotate(self, delta, time) {
+    let rot = Math.atan(0.25 * Math.cos(waveCount * 300 - 2 * time));
+    self.rotation = rot;
 }
 
 const ocean = new GameObject()
@@ -58,6 +63,7 @@ const raft = new GameObject()
         createFillInfo("BF", [Color(150, 100, 25), Color(0, 0, 0)], Vector2(0, 0))
     ])
     .setLayer(1)
+    .bindToUpdate(raft_rotate)
     .setPosition(Vector2(640, 575));
 
 const pole = new GameObject()
