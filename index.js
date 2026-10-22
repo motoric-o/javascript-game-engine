@@ -31,8 +31,16 @@ const carBody = new GameObject()
         Vector2(-150, 37)
     ])
     .setColor(Color(0, 0, 0))
-    .setFill(createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(0, 0)))
+    .setFills([
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-140, -25)),
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-140, 27)),
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(140, -25)),
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(140, 27)),
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(-65, -78)),
+        createFillInfo("BF", [Color(0, 100, 200), Color(0, 0, 0)], Vector2(65, -78))
+    ])
     .setPosition(Vector2(-50, 525))
+    .setPosition(Vector2(-50, 360))
     .isActive(true)
     .setLayer(1);
 
@@ -46,32 +54,31 @@ const window = new GameObject()
     ])
     .setLocalPosition(Vector2(0, -60))
     .setColor(Color(0, 0, 0))
-    .setFill(createFillInfo("BF", [Color(100, 150, 250), Color(0, 0, 0)], Vector2(0, 0)))
+    .setFills([createFillInfo("BF", [Color(100, 150, 250), Color(0, 0, 0)], Vector2(0, 0))])
     .setLayer(1);
 
-carBody.addChild(window)
-
-const rearTire = new GameObject()
+    
+    const rearTire = new GameObject()
     .setName('rearTire')
     .setVertices(Vector2(0, 0))
     .setRadius(40)
     .setAngVelocity(5)
     .setColor(Color(0, 0, 0))
     .setLocalPosition(Vector2(-85, 35))
-    .setFill(createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0)))
+    .setFills([createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0))])
     .setLayer(2);
-
-const frontTire = new GameObject()
+    
+    const frontTire = new GameObject()
     .setName('frontTire')
     .setVertices(Vector2(0, 0))
     .setRadius(40)
     .setAngVelocity(5)
     .setColor(Color(0, 0, 0))
     .setLocalPosition(Vector2(85, 35))
-    .setFill(createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0)))
+    .setFills([createFillInfo("BF", [Color(150, 150, 150), Color(0, 0, 0)], Vector2(0, 0))])
     .setLayer(2);
-
-const rearRim = new GameObject()
+    
+    const rearRim = new GameObject()
     .setName('rearRim')
     .setVertices([
         Vector2(0, 0),
@@ -84,8 +91,8 @@ const rearRim = new GameObject()
     .setColor(Color(0, 0, 0))
     .setLayer(3)
     .setLocalPosition(Vector2(0, 0));
-
-const frontRim = new GameObject()
+    
+    const frontRim = new GameObject()
     .setName('frontRim')
     .setVertices([
         Vector2(0, 0),
@@ -98,7 +105,9 @@ const frontRim = new GameObject()
     .setColor(Color(0, 0, 0))
     .setLayer(3)
     .setLocalPosition(Vector2(0, 0));
+    
 
+carBody.addChild(window)
 rearTire.addChild(rearRim);
 frontTire.addChild(frontRim);
 
@@ -108,5 +117,4 @@ carBody.addChild(frontTire);
 engine.addStaticObject(road);
 engine.addObject(carBody);
 
-carBody.setAngVelocity(5);
-// carBody.setVelocity(Vector2(100, 0));
+carBody.setVelocity(Vector2(100, 0));
