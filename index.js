@@ -3,6 +3,7 @@ import GameObject from "./lib/engine/object.js";
 import GameEngine from "./lib/engine/GameEngine.js";
 import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
 import { toRad } from "./lib/util/math.js";
+import { createFillInfo } from "./lib/util/graphics.js";
 
 const engine = new GameEngine(1280, 720, 2);
 
@@ -24,6 +25,15 @@ const circle = new GameObject()
     .setRadius(70)
     .setColor(Color(0, 0, 255));
 
+const contactPoint = new GameObject()
+    .setName("circle")
+    .setPosition(Vector2(-25, -25))
+    .setRadius(10)
+    .setLayer(1)
+    .setColor(Color(255, 0, 0))
+    .isActive(true)
+    .setFills([createFillInfo("BF", [Color(255, 0, 0), Color(255, 0, 0)], Vector2(0, 0))]);
+    
 const follow = new GameObject()
     .setName("follow")
     .setPosition(Vector2(640, 360))
@@ -32,6 +42,7 @@ const follow = new GameObject()
         Vector2(40, 35),
         Vector2(-40, 35)
     ])
+    .addToCollisionBlacklist(contactPoint)
     .setColor(Color(200, 200, 200));
 
 
@@ -48,11 +59,9 @@ window.addEventListener("wheel", (e) => {
 
 follow.bindToUpdate((self) => {
     self.setPosition(mousePos);
-
-    const hitPoly = self.getCollision(polygon);
-    const hitCircle = self.getCollision(circle);
-    const isHitPoly = self.checkCollision(hitPoly);
-    const isHitCircle = self.checkCollision(hitCircle);
+    
+    const isHitPoly = self.checkCollision(polygon);
+    const isHitCircle = self.checkCollision(circle);
 
     if (isHitPoly) {
         polygon.setColor(Color(255, 0, 0));
@@ -73,8 +82,15 @@ follow.bindToUpdate((self) => {
     }
 });
 
+follow.bindOnCollision((self, hit) => {
+    const contact = self.getContactPoints(hit);
+    
+    contactPoint.updatePosition(contact);
+});
+
 engine.addObject(polygon);
 engine.addObject(circle);
 engine.addObject(follow);
+engine.addObject(contactPoint);
 
 engine.start();
