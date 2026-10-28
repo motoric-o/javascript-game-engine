@@ -100,7 +100,7 @@ console.log(asset)
 
 const test = new GameObject()
     .setName("test")
-    .setSprite(asset, getFrame(0, 0, 17, 24))
+    .setSprite(asset, Vector2(17, 24))
     .setColor(Color(0, 0, 0))
     .setPosition(Vector2(640, 360))
     .setAngVelocity(toRad(90));
@@ -110,13 +110,11 @@ engine.addObject(test);
 let frame = 0;
 
 setInterval(() => {
-    const x = 17 * frame;
-
-    test.setFrame(getFrame(x, 0, 17, 24));
-
+    test.sprite.setSequence([frame, 0])
+    
     frame += 1;
 
     if (frame > 9) {
-        frame = 0
+        frame = 0;
     }
 }, 100);
