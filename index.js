@@ -103,7 +103,8 @@ const test = new GameObject()
     .setSprite(asset, Vector2(17, 24))
     .setColor(Color(0, 0, 0))
     .setPosition(Vector2(640, 360))
-    .setAngVelocity(toRad(90));
+    // .setAngVelocity(toRad(90));
+    .setScale(Vector2(5, 5));
 
 engine.addObject(test);
 
@@ -116,5 +117,6 @@ setInterval(() => {
 
     if (frame > 9) {
         frame = 0;
+        test.sprite.setFlipY()
     }
 }, 100);
