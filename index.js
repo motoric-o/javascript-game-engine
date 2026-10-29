@@ -12,6 +12,7 @@ const circle = new GameObject()
     .setName("circle")
     .setPosition(Vector2(850, 360))
     .setRadius(20)
+    .setUseCamera(false)
     .setColor(Color(0, 0, 255));
 
 circle.bindToUpdate((self) => {
@@ -47,6 +48,7 @@ const test = new GameObject()
     .setSprite(asset, Vector2(17, 24))
     .setColor(Color(0, 0, 0))
     .setPosition(Vector2(640, 360))
+    .setUseCamera(true)
     .setScale(Vector2(5, 5));
 
 const test2 = new GameObject()
@@ -110,6 +112,9 @@ const idle = createAnimation("idle", sequenceIdle, "C", 60);
 
 test.sprite.addAnimation(idle);
 test.sprite.addAnimation(run);
+
+engine.camera.setTarget(test);
+engine.camera.setSmoothness(0.1);
 
 setInterval(() => {
     // console.log(test.sprite.sequence)
