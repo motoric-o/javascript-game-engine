@@ -3,20 +3,21 @@ import GameObject from "./lib/engine/object.js";
 import GameEngine from "./lib/engine/GameEngine.js";
 import { Color, Vector2 } from "./lib/graphics/primitive/index.js";
 import { toRad } from "../lib/util/math.js";
-import { createAnimation, createAsset, createFillInfo, getFrame } from "./lib/util/graphics.js";
+import { createAnimation, createAsset, createFillInfo, createShake, getFrame } from "./lib/util/graphics.js";
 
 
-const engine = new GameEngine(1280, 720, 2);
+const engine = new GameEngine(1280, 720, 3);
 
 const circle = new GameObject()
     .setName("circle")
     .setPosition(Vector2(850, 360))
     .setRadius(20)
-    .setUseCamera(false)
+    .setUseCamera(true)
+    .setLayer(2)
     .setColor(Color(0, 0, 255));
 
 circle.bindToUpdate((self) => {
-    self.setPosition(engine.input.getMousePosition())
+    self.setPosition(engine.camera.screenToWorld(engine.input.getMousePosition()))
     if (engine.input.isMousePressed(0))
     {
         self.setColor(Color(255, 0, 0))
@@ -49,6 +50,7 @@ const test = new GameObject()
     .setColor(Color(0, 0, 0))
     .setPosition(Vector2(640, 360))
     .setUseCamera(true)
+    // .addToCollisionLayerBlacklist(2)
     .setScale(Vector2(5, 5));
 
 const test2 = new GameObject()
@@ -115,6 +117,12 @@ test.sprite.addAnimation(run);
 
 engine.camera.setTarget(test);
 engine.camera.setSmoothness(0.1);
+
+engine.camera.setShake(createShake(Vector2(5, 5), 10))
+
+test.bindOnCollision((self, hit) => {
+    console.log(hit.name);
+})
 
 setInterval(() => {
     // console.log(test.sprite.sequence)
