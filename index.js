@@ -8,10 +8,10 @@ import { createAnimation, createAsset, createFillInfo, createShake, getFrame } f
 
 const engine = new GameEngine(1280, 720, 3);
 
-engine.sound.loadSound("bgm1","./assets/sound/map.wav")
-engine.sound.loadSound("bgm2","./assets/sound/battle.mp3")
-engine.sound.loadSound("hit","./assets/sound/tackleHit.wav")
-engine.sound.loadSound("encounter","./assets/sound/initBattle.wav")
+engine.sound.loadSound("bgm1", "./assets/sound/map.wav")
+engine.sound.loadSound("bgm2", "./assets/sound/battle.mp3")
+engine.sound.loadSound("hit", "./assets/sound/tackleHit.wav")
+engine.sound.loadSound("encounter", "./assets/sound/initBattle.wav")
 
 let musicStarted = false
 
@@ -23,32 +23,6 @@ const circle = new GameObject()
     .setLayer(2)
     .setColor(Color(0, 0, 255));
 
-circle.bindToUpdate((self) => {
-    self.setPosition(engine.camera.screenToWorld(engine.input.getMousePosition()))
-    if (engine.input.isMousePressed(0))
-    {
-        self.setColor(Color(255, 0, 0))
-        engine.sound.playSFX("hit")
-
-        if (!musicStarted)
-        {
-            engine.sound.playMusic("bgm1")
-            musicStarted = true
-        }
-    }
-
-    if (engine.input.isMouseReleased(0))
-    {
-        self.setColor(Color(0, 0, 255))
-    }
-
-    let delta = engine.input.getWheelDelta()
-    if (delta !== 0)
-    {
-        self.setRadius(self.radius + delta/10)
-    }
-
-})
 
 
 engine.addObject(circle);
@@ -62,7 +36,7 @@ const test = new GameObject()
     .setName("test")
     .setSprite(asset, Vector2(17, 24))
     .setColor(Color(0, 0, 0))
-    .setPosition(Vector2(640, 360))
+    .setPosition(Vector2(0, 0))
     .setUseCamera(true)
     // .addToCollisionLayerBlacklist(2)
     .setScale(Vector2(5, 5));
@@ -85,29 +59,24 @@ test.bindToUpdate((self) => {
 
     let moveSpeed = 400;
 
-    if (engine.input.isKeyDown("D"))
-    {
+    if (engine.input.isKeyDown("D")) {
         x = 1;
     }
-    if (engine.input.isKeyDown("A"))
-    {
+    if (engine.input.isKeyDown("A")) {
         x = -1;
     }
-    if (engine.input.isKeyDown("w"))
-    {
+    if (engine.input.isKeyDown("w")) {
         y = -1;
     }
-    if (engine.input.isKeyDown("s")){
+    if (engine.input.isKeyDown("s")) {
         y = 1;
     }
-    if (engine.input.isKeyPressed(" "))
-    {
-        self.setPosition(Vector2(250,250));
+    if (engine.input.isKeyPressed(" ")) {
+        self.setPosition(Vector2(250, 250));
         engine.sound.stopMusic()
         let sound = engine.sound.playSFX("encounter");
 
-        if (sound != null)
-        {
+        if (sound != null) {
             sound.addEventListener("ended", () => {
                 engine.sound.playMusic("bgm2")
             })
@@ -117,15 +86,15 @@ test.bindToUpdate((self) => {
     self.setVelocity(Vector2(x * moveSpeed, y * moveSpeed));
 
     if (self.graphics.Transform.magnitude(self.velocity) == 0) {
-        if (self.sprite.currentAnimation == 0) {
+        if (self.sprite.currentAnimation == "idle") {
             return;
         }
-        self.sprite.setAnimation(0);
+        self.sprite.setAnimation("idle");
     } else {
-        if (self.sprite.currentAnimation == 1) {
+        if (self.sprite.currentAnimation == "run") {
             return;
         }
-        self.sprite.setAnimation(1);
+        self.sprite.setAnimation("run");
     }
 })
 
@@ -147,8 +116,45 @@ test.bindOnCollision((self, hit) => {
     console.log(hit.name);
 })
 
+const cursor = new GameObject()
+    .setColor(Color(0, 0, 0))
+    .setVertices([
+        Vector2(0, 0),
+        Vector2(25, 10),
+        Vector2(12, 12),
+        Vector2(8, 25)
+    ])
+    .setLayer(2)
+    .setFills([
+        createFillInfo("BF", [Color(0, 255, 255), Color(0, 0, 0)], Vector2(5, 5))
+    ]);
+
+cursor.bindToUpdate((self) => {
+    self.setPosition(engine.camera.screenToWorld(engine.input.getMousePosition()))
+    if (engine.input.isMousePressed(0)) {
+        self.setColor(Color(255, 0, 0))
+        engine.sound.playSFX("hit")
+
+        if (!musicStarted) {
+            engine.sound.playMusic("bgm1")
+            musicStarted = true
+        }
+    }
+
+    if (engine.input.isMouseReleased(0)) {
+        self.setColor(Color(0, 0, 0))
+    }
+
+    // let delta = engine.input.getWheelDelta()
+    // if (delta !== 0) {
+    //     self.setRadius(self.radius + delta / 10)
+    // }
+
+})
+engine.addObject(cursor)
+
 setInterval(() => {
     // console.log(test.sprite.sequence)
     // console.log(test.sprite.animations[test.sprite.currentAnimation].sequence[test.sprite.sequence])
-}, 1/240);
+}, 1 / 240);
 
