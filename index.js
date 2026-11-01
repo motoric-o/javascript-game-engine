@@ -8,6 +8,13 @@ import { createAnimation, createAsset, createFillInfo, getFrame } from "./lib/ut
 
 const engine = new GameEngine(1280, 720, 2);
 
+engine.sound.loadSound("bgm1","./assets/sound/map.wav")
+engine.sound.loadSound("bgm2","./assets/sound/battle.mp3")
+engine.sound.loadSound("hit","./assets/sound/tackleHit.wav")
+engine.sound.loadSound("encounter","./assets/sound/initBattle.wav")
+
+let musicStarted = false
+
 const circle = new GameObject()
     .setName("circle")
     .setPosition(Vector2(850, 360))
@@ -20,6 +27,13 @@ circle.bindToUpdate((self) => {
     if (engine.input.isMousePressed(0))
     {
         self.setColor(Color(255, 0, 0))
+        engine.sound.playSFX("hit")
+
+        if (!musicStarted)
+        {
+            engine.sound.playMusic("bgm1")
+            musicStarted = true
+        }
     }
 
     if (engine.input.isMouseReleased(0))
@@ -87,6 +101,15 @@ test.bindToUpdate((self) => {
     if (engine.input.isKeyPressed(" "))
     {
         self.setPosition(Vector2(250,250));
+        engine.sound.stopMusic()
+        let sound = engine.sound.playSFX("encounter");
+
+        if (sound != null)
+        {
+            sound.addEventListener("ended", () => {
+                engine.sound.playMusic("bgm2")
+            })
+        }
     }
 
     self.setVelocity(Vector2(x * moveSpeed, y * moveSpeed));
