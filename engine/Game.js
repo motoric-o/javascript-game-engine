@@ -1,4 +1,6 @@
+// USER
 import * as THREE from "three";
+import Physics from "./Core/Physics.js";
 
 export default class Game {
     constructor(params) {
@@ -31,7 +33,7 @@ export default class Game {
 
         this.sceneManager = null;
         this.inputManager = null;
-        this.physics = null;
+        this.physics = new Physics();
         this.camera = null;
         this.uiManager = null;
 
@@ -42,6 +44,11 @@ export default class Game {
         this.state = "";
         this.isRunning = false;
         this.animationFrameId = null;
+
+        this.dynamicObjects = [];
+        this.staticObjects = [];
+
+        this.stepped = [];
 
         window.addEventListener("resize", () => this.onResize());
     }
@@ -75,7 +82,11 @@ export default class Game {
         this.accumulated += delta;
 
         while (this.accumulated >= this.settings.tickRate) {
-            // script updates goes here
+            this.physics.update(this.settings.tickRate, this.dynamicObjects, this.staticObjects);
+
+            for (let bind of this.stepped) {
+                bind(this.settings.tickRate, this.clock);
+            }
 
             this.accumulated -= this.settings.tickRate;
             this.clock += this.settings.tickRate;
@@ -106,6 +117,15 @@ export default class Game {
 
     removeStaticObject(obj) {
 
+    }
+
+    bindToUpdate(func) {
+        this.stepped.push(func);
+    }
+
+    unbindFromUpdate(func) {
+        const idx = this.stepped.indexOf(func);
+        this.stepped.splice(idx, 1);
     }
 
     onResize() {
