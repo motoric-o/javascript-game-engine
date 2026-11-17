@@ -1,0 +1,26 @@
+{
+  "name": "javascript-game-engine",
+  "version": "1.0.0",
+  "description": "A 3D game engine based on ThreeJS and WebGL as the 3D renderer.",
+  "homepage": "https://github.com/motoric-o/javascript-game-engine#readme",
+  "bugs": {
+    "url": "https://github.com/motoric-o/javascript-game-engine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/motoric-o/javascript-game-engine.git"
+  },
+  "license": "ISC",
+  "author": "Rico Dharmawan",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}
