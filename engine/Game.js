@@ -1,6 +1,7 @@
 // USER
 import * as THREE from "three";
 import Physics from "./Core/Physics.js";
+import Debris from "./GameObjects/Debris.js";
 
 export default class Game {
     constructor(params) {
@@ -82,6 +83,39 @@ export default class Game {
         this.accumulated += delta;
 
         while (this.accumulated >= this.settings.tickRate) {
+            // Check if object is destroyed
+            for (let i = this.dynamicObjects.length - 1; i >= 0; i--) {
+                const object = this.dynamicObjects[i];
+
+                if (object instanceof Debris) {
+                    if (object.accumulated >= object.timeout && !object.destroyed) {
+                        object.destroy();
+                    } else {
+                        object.accumulated += this.settings.tickRate;
+                    }
+                }
+
+                if (object.destroyed) {
+                    this.dynamicObjects.splice(i, 1);
+                }
+            }
+
+            for (let i = this.staticObjects.length - 1; i >= 0; i--) {
+                const object = this.staticObjects[i];
+
+                if (object instanceof Debris) {
+                    if (object.accumulated >= object.timeout && !object.destroyed) {
+                        object.destroy();
+                    } else {
+                        object.accumulated += this.settings.tickRate;
+                    }
+                }
+
+                if (object.destroyed) {
+                    this.staticObjects.splice(i, 1);
+                }
+            }
+
             this.physics.update(this.settings.tickRate, this.dynamicObjects, this.staticObjects);
 
             for (let bind of this.stepped) {

@@ -11,7 +11,7 @@ export default class Physics {
     update(dt, dynamicObjects, staticObjects) {
         // Integrated Physics
         for (let obj of dynamicObjects) {
-            if (obj.useGravity || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition.enabled || obj.targetAngle.enabled) {
+            if (obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition.enabled || obj.targetAngle.enabled) {
                 this.updateObj(dt, obj);
             }
         }
@@ -60,23 +60,29 @@ export default class Physics {
     }
 
     updateObj(dt, obj) {
-        if (obj.targetPosition.enabled) {
-            this.updateObjPosition(dt, obj, obj.targetPosition);
-        } else {
-            this.updateObjPosition(dt, obj);
+        if (obj.usePhysics) {
+            if (obj.targetPosition.enabled) {
+                this.updateObjPosition(dt, obj, obj.targetPosition);
+            } else {
+                this.updateObjPosition(dt, obj);
+            }
+
+            if (obj.targetAngle.enabled) {
+                this.updateObjAngle(dt, obj, obj.targetAngle);
+            } else {
+                this.updateObjAngle(dt, obj);
+            }
         }
 
-        if (obj.targetAngle.enabled) {
-            this.updateObjAngle(dt, obj, obj.targetAngle);
-        } else {
-            this.updateObjAngle(dt, obj);
+        for (let bind of obj.stepped) {
+            bind(obj, dt);
         }
 
         obj.root.updateMatrixWorld();
     }
 
     updateObjPosition(dt, obj, task) {
-        if (task) {
+        if (task && obj.usePhysics) {
             const remaining = Math.max(task.duration - task.elapsed, dt);
             const alpha = Math.min(dt / remaining, 1);
 
@@ -86,16 +92,16 @@ export default class Physics {
             return;
         }
 
-        if (obj.useGravity) {
+        if (obj.useGravity && obj.usePhysics) {
             obj.velocity.addScaledVector(this.gravity, dt);
         }
 
         let totalVelocity = obj.velocity.clone();
 
         for (let vel of obj.velocities) {
-            totalVelocity.x += vel.x;
-            totalVelocity.y += vel.y;
-            totalVelocity.z += vel.z;
+            totalVelocity.x += vel.velocity.x;
+            totalVelocity.y += vel.velocity.y;
+            totalVelocity.z += vel.velocity.z;
         }
 
         obj.root.position.x += totalVelocity.x * dt;
@@ -104,7 +110,7 @@ export default class Physics {
     }
 
     updateObjAngle(dt, obj, task) {
-        if (task) {
+        if (task && obj.usePhysics) {
             const remaining = Math.max(task.duration - task.elapsed, dt);
             const alpha = Math.min(dt / remaining, 1);
 
@@ -117,9 +123,9 @@ export default class Physics {
         let totalVel = obj.angularVelocity.clone();
 
         for (let vel of obj.angularVelocities) {
-            totalVel.x += vel.x;
-            totalVel.y += vel.y;
-            totalVel.z += vel.z;
+            totalVel.x += vel.velocity.x;
+            totalVel.y += vel.velocity.y;
+            totalVel.z += vel.velocity.z;
         }
 
         const speed = totalVel.length();
