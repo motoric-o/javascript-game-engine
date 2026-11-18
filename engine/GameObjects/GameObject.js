@@ -22,7 +22,7 @@ export default class GameObject {
     }
 
     addChild(obj) {
-        if (!obj instanceof GameObject) {
+        if (!(obj instanceof GameObject)) {
             console.error("ERROR: Child must be a Game Object!");
             return this;
         }
@@ -34,7 +34,9 @@ export default class GameObject {
 
     removeChild(obj) {
         const idx = this.children.indexOf(obj);
-        this.children.splice(idx, 1);
+        if (idx != -1) {
+            this.children.splice(idx, 1);
+        }
     }
 
     bindOnSpawn(fn) {
@@ -44,7 +46,9 @@ export default class GameObject {
 
     unbindOnSpawn(fn) {
         const idx = this.onSpawn.indexOf(fn);
-        this.onSpawn.splice(idx, 1);
+        if (idx != -1) {
+            this.onSpawn.splice(idx, 1);
+        }
     }
 
     bindToStepped(fn) {
@@ -58,7 +62,9 @@ export default class GameObject {
 
     unbindStepped(fn) {
         const idx = this.stepped.indexOf(fn);
-        this.stepped.splice(idx, 1);
+        if (idx != -1) {
+            this.stepped.splice(idx, 1);
+        }
     }
 
     bindOnDestroy(fn) {
@@ -68,7 +74,9 @@ export default class GameObject {
 
     unbindOnDestroy(fn) {
         const idx = this.onDestroy.indexOf(fn);
-        this.onDestroy.splice(idx, 1);
+        if (idx != -1) {
+            this.onDestroy.splice(idx, 1);
+        }
     }
 
     setStatic(isStatic) {
@@ -77,6 +85,10 @@ export default class GameObject {
     }
 
     destroy() {
+        if (this.destroyed) {
+            return;
+        }
+
         this.destroyed = true;
 
         for (let bind of this.onDestroy) {

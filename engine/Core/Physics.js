@@ -11,7 +11,7 @@ export default class Physics {
     update(dt, dynamicObjects, staticObjects) {
         // Integrated Physics
         for (let obj of dynamicObjects) {
-            if (obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition.enabled || obj.targetAngle.enabled) {
+            if ((obj.usePhysics && obj.useGravity) || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition?.enabled || obj.targetAngle?.enabled || obj.stepped.length > 0) {
                 this.updateObj(dt, obj);
             }
         }
@@ -60,18 +60,16 @@ export default class Physics {
     }
 
     updateObj(dt, obj) {
-        if (obj.usePhysics) {
-            if (obj.targetPosition.enabled) {
-                this.updateObjPosition(dt, obj, obj.targetPosition);
-            } else {
-                this.updateObjPosition(dt, obj);
-            }
+        if (obj.targetPosition?.enabled) {
+            this.updateObjPosition(dt, obj, obj.targetPosition);
+        } else {
+            this.updateObjPosition(dt, obj);
+        }
 
-            if (obj.targetAngle.enabled) {
-                this.updateObjAngle(dt, obj, obj.targetAngle);
-            } else {
-                this.updateObjAngle(dt, obj);
-            }
+        if (obj.targetAngle?.enabled) {
+            this.updateObjAngle(dt, obj, obj.targetAngle);
+        } else {
+            this.updateObjAngle(dt, obj);
         }
 
         for (let bind of obj.stepped) {

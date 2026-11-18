@@ -35,12 +35,15 @@ export default class Object extends GameObject {
     }
 
     addChild(obj) {
-        if (!obj instanceof GameObject || root == null) {
+        if (!(obj instanceof GameObject) || this.root == null) {
             console.error("ERROR: Child must be a Game Object!");
             return this;
         }
 
-        this.root.add(obj);
+        if (obj.root?.isObject3D) {
+            this.root.add(obj.root);
+        }
+
         this.children.push(obj);
 
         if (obj instanceof Velocity) {
@@ -63,18 +66,27 @@ export default class Object extends GameObject {
     }
 
     removeChild(obj) {
-        this.root.remove(obj);
+        if (obj.root?.isObject3D) {
+            this.root.remove(obj.root);
+        }
+        
         const idx = this.children.indexOf(obj);
-        this.children.splice(idx, 1);
+        if (idx != -1) {
+            this.children.splice(idx, 1);
+        }
 
         if (this.velocities.includes(obj)) {
             const index = this.velocities.indexOf(obj);
-            this.velocities.splice(index, 1);
+            if (index != -1) {
+                this.velocities.splice(index, 1);
+            }
         }
 
         if (this.angularVelocities.includes(obj)) {
             const index = this.angularVelocities.indexOf(obj);
-            this.angularVelocities.splice(index, 1);
+            if (index != -1) {
+                this.angularVelocities.splice(index, 1);
+            }
         }
 
         if (obj instanceof TargetPosition) {
@@ -97,7 +109,9 @@ export default class Object extends GameObject {
 
     unbindOnCollision(fn) {
         const idx = this.onCollision.indexOf(fn);
-        this.onCollision.splice(idx, 1);
+        if (idx != -1) {
+            this.onCollision.splice(idx, 1);
+        }
     }
 
     bindOnCollisionEnded(fn) {
@@ -111,6 +125,8 @@ export default class Object extends GameObject {
 
     unbindOnCollisionEnded(fn) {
         const idx = this.onCollisionEnded.indexOf(fn);
-        this.onCollisionEnded.splice(idx, 1);
+        if (idx != -1) {
+            this.onCollisionEnded.splice(idx, 1);   
+        }
     }
 }

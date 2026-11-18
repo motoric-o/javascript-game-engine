@@ -159,7 +159,9 @@ export default class Game {
 
     unbindFromUpdate(func) {
         const idx = this.stepped.indexOf(func);
-        this.stepped.splice(idx, 1);
+        if (idx != -1) {
+            this.stepped.splice(idx, 1);
+        }
     }
 
     onResize() {
