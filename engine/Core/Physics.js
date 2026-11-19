@@ -11,7 +11,7 @@ export default class Physics {
     update(dt, dynamicObjects, staticObjects) {
         // Integrated Physics
         for (let obj of dynamicObjects) {
-            if ((obj.usePhysics && obj.useGravity) || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition?.enabled || obj.targetAngle?.enabled || obj.stepped.length > 0) {
+            if (obj.usePhysics || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition?.enabled || obj.targetAngle?.enabled || obj.stepped.length > 0) {
                 this.updateObj(dt, obj);
             }
         }
@@ -23,7 +23,7 @@ export default class Physics {
             }
 
             for (let statObj of staticObjects) {
-                if (!statObj.canCollide) {
+                if (!statObj.canCollide || obj.collisionBlacklistObjects.includes(statObj)) {
                     continue;
                 }
 
@@ -46,7 +46,7 @@ export default class Physics {
             for (let j = i + 1; j < dynamicObjects.length; j++) {
                 const objB = dynamicObjects[j];
 
-                if (!objB.canCollide) {
+                if (!objB.canCollide || objA.collisionBlacklistObjects.includes(objB) || objB.collisionBlacklistObjects.includes(objA)) {
                     continue;
                 }
 
@@ -80,7 +80,11 @@ export default class Physics {
     }
 
     updateObjPosition(dt, obj, task) {
-        if (task && obj.usePhysics) {
+        if (!obj.usePhysics) {
+            return;
+        }
+
+        if (task) {
             const remaining = Math.max(task.duration - task.elapsed, dt);
             const alpha = Math.min(dt / remaining, 1);
 
@@ -90,7 +94,7 @@ export default class Physics {
             return;
         }
 
-        if (obj.useGravity && obj.usePhysics) {
+        if (obj.useGravity) {
             obj.velocity.addScaledVector(this.gravity, dt);
         }
 
@@ -108,7 +112,11 @@ export default class Physics {
     }
 
     updateObjAngle(dt, obj, task) {
-        if (task && obj.usePhysics) {
+        if (!obj.usePhysics) {
+            return;
+        }
+
+        if (task) {
             const remaining = Math.max(task.duration - task.elapsed, dt);
             const alpha = Math.min(dt / remaining, 1);
 
@@ -140,7 +148,7 @@ export default class Physics {
     }
 
     getWorldBox(obj) {
-        return Box3FromObject(obj.hitbox);
+        return Box3FromObject(obj.hitbox.root);
     }
 
     /** AIGEN
@@ -332,7 +340,7 @@ export default class Physics {
 
     getColliderTarget(obj) {
         if (obj.useHitbox && obj.hitbox != null) {
-            return obj.hitbox;
+            return obj.hitbox.root;
         }
 
         return obj.root;

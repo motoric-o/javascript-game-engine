@@ -4,6 +4,7 @@ export default class GameObject {
     constructor() {
         this.tags = [];
         this.children = [];
+        this.parent = null;
 
         // Events and Binds
         this.onSpawn = [];
@@ -28,6 +29,7 @@ export default class GameObject {
         }
 
         this.children.push(obj);
+        obj.parent = this;
         
         return this;
     }

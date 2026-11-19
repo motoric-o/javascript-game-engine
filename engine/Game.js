@@ -138,19 +138,21 @@ export default class Game {
     }
 
     addObject(obj) {
+        obj.setStatic(false);
+        this.dynamicObjects.push(obj); 
 
+        for (let bind of obj.onSpawn) {
+            bind(obj);
+        }
     }
 
     addStaticObject(obj) {
+        obj.setStatic(true);
+        this.staticObjects.push(obj);
 
-    }
-
-    removeObject(obj) {
-
-    }
-
-    removeStaticObject(obj) {
-
+        for (let bind of obj.onSpawn) {
+            bind(obj);
+        }
     }
 
     bindToUpdate(func) {

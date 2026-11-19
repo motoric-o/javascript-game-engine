@@ -11,6 +11,13 @@ export default class Object extends GameObject {
 
         this.root = root;
         
+        if (this.root?.userData) {
+            this.root.userData.gameObject = this;
+        }
+
+        this.mass = 1;
+        this.restitution = 0;
+        
         this.velocity = Vector3(0, 0, 0);
         this.velocities = [];
         this.angularVelocity = Vector3(0, 0, 0);
@@ -45,6 +52,7 @@ export default class Object extends GameObject {
         }
 
         this.children.push(obj);
+        obj.parent = this;
 
         if (obj instanceof Velocity) {
             this.velocities.push(obj);
@@ -96,6 +104,46 @@ export default class Object extends GameObject {
         if (obj instanceof TargetAngle) {
             this.targetAngle = null;
         }
+    }
+
+    setMass(mass) {
+        this.mass = mass;
+        return this;
+    }
+
+    setRestitution(restitution) {
+        this.restitution = restitution;
+        return this;
+    }
+
+    setCanCollide(canCollide) {
+        this.canCollide = canCollide;
+    }
+
+    setHitbox(obj) {
+        this.hitbox = obj;
+        return this;
+    }
+
+    setUseHitbox(useHitbox) {
+        this.useHitbox = useHitbox;
+        return this;
+    }
+
+    setUsePhysics(usePhysics) {
+        this.usePhysics = usePhysics;
+        return this;
+    }
+
+    setUseGravity(useGravity) {
+        this.useGravity = useGravity;
+        this.usePhysics = useGravity;
+        return this;
+    }
+
+    setAttribute(key, value) {
+        this.attributes[key] = value;
+        return this;
     }
 
     bindOnCollision(fn) {

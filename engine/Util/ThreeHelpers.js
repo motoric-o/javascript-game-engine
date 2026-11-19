@@ -8,12 +8,26 @@ export function disposeObject(obj) {
     THREE.disposeObject(obj);
 }
 
-export function getGameObjectFromChild(obj) {
+export function getGameObjectFromObject3DChild(obj) {
     let current = obj;
 
     while (current) {
         if (current.userData.gameObject) {
             return current.userData.gameObject;
+        }
+
+        current = current.parent;
+    }
+
+    return null;
+}
+
+export function getGameObjectFromChild(obj) {
+    let current = obj;
+
+    while (current) {
+        if (current.parent == null) {
+            return current;
         }
 
         current = current.parent;
