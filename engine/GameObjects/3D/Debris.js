@@ -1,6 +1,6 @@
-import Object from "./Object.js";
+import PhysicalObject from "./PhysicalObject.js";
 
-export default class Debris extends Object {
+export default class Debris extends PhysicalObject {
     constructor(root, timeout) {
         super(root);
 

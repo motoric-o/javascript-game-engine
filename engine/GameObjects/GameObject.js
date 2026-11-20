@@ -22,6 +22,14 @@ export default class GameObject {
         return this;
     }
 
+    removeTag(tag) {
+        const idx = this.tags.indexOf(tag);
+
+        if (idx != -1) {
+            this.tags.splice(idx, 1);
+        }
+    }
+
     addChild(obj) {
         if (!(obj instanceof GameObject)) {
             console.error("ERROR: Child must be a Game Object!");

@@ -309,7 +309,13 @@ export default class Physics {
         const velIntoSurface = obj.velocity.dot(contact.normal);
 
         if (velIntoSurface < 0) {
-            obj.velocity.addScaledVector(contact.normal, -velIntoSurface);
+            let e = obj.restitution ?? 0;
+
+            if (Math.abs(velIntoSurface) < 0.2) {
+                e = 0;
+            }
+
+            obj.velocity.addScaledVector(contact.normal, (-(1 + e) * velIntoSurface));
         }
     }
 

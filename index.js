@@ -1,0 +1,157 @@
+/** AIGEN
+ * prompt 1: oh smoke test would be best I agree, lets do that. For testing purposes I'll allow you to generate the codes as it's for testing purposes. 
+ * Also name a good branch just for this one time smoke test, like a checkpoint kind of name
+ * 
+ * prompt 2: help me rewrite the index.js to test several different physics scenarios, like dynamic vs static, 
+ * dynamic vs dynamic, angled bounce, etc. each separated by interval. You may edit directly in the files
+ */
+import * as THREE from "three";
+import Game from "./engine/Game.js";
+import GameScene from "./engine/GameObjects/Scene/GameScene.js";
+import GameCamera from "./engine/GameObjects/3D/GameCamera.js";
+import PhysicalObject from "./engine/GameObjects/3D/PhysicalObject.js";
+import Debris from "./engine/GameObjects/3D/Debris.js";
+import AngularVelocity from "./engine/GameObjects/Physics/AngularVelocity.js";
+import TargetPosition from "./engine/GameObjects/Physics/TargetPosition.js";
+import { Vector3 } from "./engine/Util/Math.js";
+
+const game = new Game({
+    clearColor: 0x1a1a2e,
+    startScene: "smoke-test"
+});
+
+const camera = new GameCamera();
+camera.root.position.set(0, 5, 13);
+camera.lookAt(Vector3(0, 1.5, 0));
+
+const scene = new GameScene("smoke-test", camera);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(6, 12, 8);
+dirLight.castShadow = true;
+scene.root.add(ambient, dirLight);
+
+// Helper to build a box PhysicalObject or Debris
+function createBox({ size = [1, 1, 1], pos = [0, 0, 0], rot = [0, 0, 0], color = 0x4cc9f0, restitution = 0, mass = 1, debrisTimeout = null }) {
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(...size),
+        new THREE.MeshStandardMaterial({ color })
+    );
+    mesh.position.set(...pos);
+    mesh.rotation.set(...rot);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const obj = debrisTimeout != null ? new Debris(mesh, debrisTimeout) : new PhysicalObject(mesh);
+    obj.restitution = restitution;
+    obj.mass = mass;
+    return obj;
+}
+
+// Persistent static floor
+const floor = createBox({ size: [16, 0.5, 12], pos: [0, -0.25, 0], color: 0x3a3a5c, restitution: 0.6 });
+scene.addStaticObject(floor);
+
+let scenarioObjects = [];
+
+function clearScenario() {
+    for (const obj of scenarioObjects) {
+        obj.destroy();
+    }
+    scenarioObjects = [];
+}
+
+function spawnDynamic(obj) {
+    scenarioObjects.push(obj);
+    game.addObject(obj);
+    return obj;
+}
+
+function spawnStatic(obj) {
+    scenarioObjects.push(obj);
+    game.addStaticObject(obj);
+    return obj;
+}
+
+const scenarios = [
+    {
+        name: "1. Dynamic vs Static Bounce + Debris Auto-Destroy",
+        duration: 4.5,
+        run() {
+            const box = createBox({ pos: [-1.5, 6, 0], color: 0x4cc9f0, restitution: 0.7 });
+            box.addChild(new AngularVelocity("spin").setVelocity(Vector3(1.5, 2, 0.8)));
+            spawnDynamic(box);
+
+            const debris = createBox({ size: [0.6, 0.6, 0.6], pos: [2, 5, 0], color: 0xf72585, restitution: 0.5, debrisTimeout: 2.5 });
+            debris.bindOnDestroy(() => console.log("  -> Debris auto-destroyed after 2.5s"));
+            spawnDynamic(debris);
+        }
+    },
+    {
+        name: "2. Angled Static Ramp Bounce (Rotated OBB SAT)",
+        duration: 5.0,
+        run() {
+            const ramp = createBox({ size: [7, 0.4, 4], pos: [-1, 2.2, 0], rot: [0, 0, -0.38], color: 0x7209b7, restitution: 0.7 });
+            spawnStatic(ramp);
+
+            const ballBox = createBox({ size: [0.9, 0.9, 0.9], pos: [-2.5, 6.5, 0], color: 0x4ade80, restitution: 0.75 });
+            spawnDynamic(ballBox);
+        }
+    },
+    {
+        name: "3. Dynamic vs Dynamic Mass-Weighted Collision",
+        duration: 5.0,
+        run() {
+            const heavy = createBox({ size: [1.5, 1.5, 1.5], pos: [-4, 0.75, 0], color: 0xf59e0b, mass: 5, restitution: 0.85 });
+            heavy.useGravity = false;
+            heavy.velocity.set(4, 0, 0);
+            spawnDynamic(heavy);
+
+            const light = createBox({ size: [0.9, 0.9, 0.9], pos: [4, 0.45, 0], color: 0x38bdf8, mass: 1, restitution: 0.85 });
+            light.useGravity = true;
+            light.velocity.set(-2.5, 0, 0);
+            spawnDynamic(light);
+        }
+    },
+    {
+        name: "4. Dynamic Stack + TargetPosition Platform",
+        duration: 5.0,
+        run() {
+            const bottom = createBox({ size: [1.4, 1.4, 1.4], pos: [0, 2.5, 0], color: 0xfb7185, mass: 3, restitution: 0.4 });
+            const top = createBox({ size: [0.9, 0.9, 0.9], pos: [0.1, 6.0, 0], color: 0xa78bfa, mass: 1, restitution: 0.6 });
+            spawnDynamic(bottom);
+            spawnDynamic(top);
+
+            const mover = createBox({ size: [2, 0.4, 2], pos: [-4, 3.5, -2], color: 0x2dd4bf });
+            mover.useGravity = false;
+            const target = new TargetPosition("glide").setTargetPosition(Vector3(4, 3.5, -2)).setDuration(3.5);
+            mover.addChild(target);
+            spawnDynamic(mover);
+        }
+    }
+];
+
+let currentIndex = 0;
+let elapsed = 0;
+
+function startScenario(idx) {
+    clearScenario();
+    const s = scenarios[idx];
+    console.log(`[Smoke Test] Starting: ${s.name}`);
+    s.run();
+}
+
+game.bindToUpdate((dt) => {
+    elapsed += dt;
+    if (elapsed >= scenarios[currentIndex].duration) {
+        elapsed = 0;
+        currentIndex = (currentIndex + 1) % scenarios.length;
+        startScenario(currentIndex);
+    }
+});
+
+game.sceneManager.addScene(scene);
+game.start();
+startScenario(0);

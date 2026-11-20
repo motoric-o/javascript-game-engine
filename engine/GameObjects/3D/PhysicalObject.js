@@ -118,6 +118,7 @@ export default class PhysicalObject extends GameObject {
 
     setCanCollide(canCollide) {
         this.canCollide = canCollide;
+        return this;
     }
 
     setHitbox(obj) {
