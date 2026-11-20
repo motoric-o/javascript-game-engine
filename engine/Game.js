@@ -1,8 +1,8 @@
 // USER
 import * as THREE from "three";
 import Physics from "./Core/Physics.js";
-import Debris from "./GameObjects/Debris.js";
-import Camera from "./GameObjects/Camera.js";
+import Debris from "./GameObjects/3D/Debris.js";
+import SceneManager from "./Core/SceneManager.js";
 
 export default class Game {
     constructor(params) {
@@ -20,6 +20,8 @@ export default class Game {
             tickRate: 1/60,
             maxDt: 0.25,
 
+            startScene: null,
+
             debug: false
         }
 
@@ -33,10 +35,10 @@ export default class Game {
         this.renderer.shadowMap.type = this.settings.shadowMapType;
         this.settings.container.appendChild(this.renderer.domElement);
 
-        this.sceneManager = null;
+        this.sceneManager = new SceneManager();
         this.inputManager = null;
         this.physics = new Physics();
-        this.camera = new Camera(this.settings.width / this.settings.height);
+        this.camera = null;
         this.uiManager = null;
         
         this.clock = 0;
@@ -53,10 +55,18 @@ export default class Game {
         this.stepped = [];
         
         window.addEventListener("resize", () => this.onResize());
-        this.addObject(this.camera);
     }
 
     start() {
+        if (this.settings.startScene != null && this.sceneManager.currentScene == null) {
+            this.sceneManager.enterScene(this.settings.startScene, this);
+        }
+
+        if (this.sceneManager.currentScene == null) {
+            console.error("ERROR: No scenes are set to start.");
+            return;
+        }
+
         if (this.isRunning) {
             return;
         }
@@ -75,7 +85,7 @@ export default class Game {
     }
 
     tick(timestamp) {
-        if (!this.isRunning) {
+        if (!this.isRunning || !this.sceneManager.currentScene || !this.camera) {
             return;
         }
 
@@ -99,6 +109,7 @@ export default class Game {
 
                 if (object.destroyed) {
                     this.dynamicObjects.splice(i, 1);
+                    this.sceneManager.currentScene.root.remove(object.root);
                 }
             }
 
@@ -115,6 +126,7 @@ export default class Game {
 
                 if (object.destroyed) {
                     this.staticObjects.splice(i, 1);
+                    this.sceneManager.currentScene.root.remove(object.root);
                 }
             }
 
@@ -128,7 +140,7 @@ export default class Game {
             this.clock += this.settings.tickRate;
         }
 
-        this.renderer.render(this.sceneManager.currentScene, this.camera.root)
+        this.renderer.render(this.sceneManager.currentScene.root, this.camera.root)
 
         this.animationFrameId = requestAnimationFrame((timestamp) => this.tick(timestamp));
 
@@ -142,6 +154,10 @@ export default class Game {
         obj.setStatic(false);
         this.dynamicObjects.push(obj); 
 
+        if (this.sceneManager.currentScene != null && obj.root?.isObject3D) {
+            this.sceneManager.currentScene.root.add(obj.root);
+        }
+
         for (let bind of obj.onSpawn) {
             bind(obj);
         }
@@ -150,6 +166,10 @@ export default class Game {
     addStaticObject(obj) {
         obj.setStatic(true);
         this.staticObjects.push(obj);
+
+        if (this.sceneManager.currentScene != null && obj.root?.isObject3D) {
+            this.sceneManager.currentScene.root.add(obj.root);
+        }
 
         for (let bind of obj.onSpawn) {
             bind(obj);
@@ -175,6 +195,6 @@ export default class Game {
         this.settings.height = height;
 
         this.renderer.setSize(this.settings.width, this.settings.height);
-        this.camera.onResize(width, height)
+        this.camera?.onResize(width, height);
     }
 }

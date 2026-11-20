@@ -1,20 +1,20 @@
-import { Vector3 } from "../Util/Math.js";
-import GameObject from "./GameObject.js";
+import { Quaternion } from "../../Util/Math.js";
+import GameObject from "../GameObject.js";
 
-export default class TargetPosition extends GameObject {
+export default class TargetAngle extends GameObject {
     constructor(name) {
         super();
 
         this.name = name;
         this.root = this;
 
-        this.targetPosition = Vector3(0, 0, 0);
+        this.targetAngle = Quaternion(0, 0, 0);
         this.duration = 1;
         this.elapsed = 0;
     }
 
-    setTargetPosition(position) {
-        this.targetPosition = position;
+    setTargetAngle(angle) {
+        this.targetAngle = angle;
         return this;
     }
 

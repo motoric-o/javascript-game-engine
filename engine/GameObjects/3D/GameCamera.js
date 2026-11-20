@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import Object from "./Object.js";
+import Object from "../Object.js";
 
-export default class Camera extends Object {
+export default class GameCamera extends Object {
     constructor(aspect = 16/9, fov = 70, near = 0.1, far = 1000) {
         const root = new THREE.PerspectiveCamera(fov, aspect, near, far);
         super(root);

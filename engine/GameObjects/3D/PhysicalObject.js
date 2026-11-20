@@ -1,11 +1,11 @@
-import { Vector3 } from "../Util/Math.js";
-import AngularVelocity from "./AngularVelocity.js";
-import GameObject from "./GameObject.js";
-import TargetAngle from "./TargetAngle.js";
-import TargetPosition from "./TargetPosition.js";
-import Velocity from "./Velocity.js";
+import { Vector3 } from "../../Util/Math.js";
+import AngularVelocity from "../Physics/AngularVelocity.js";
+import GameObject from "../GameObject.js";
+import TargetAngle from "../Physics/TargetAngle.js";
+import TargetPosition from "../Physics/TargetPosition.js";
+import Velocity from "../Physics/Velocity.js";
 
-export default class Object extends GameObject {
+export default class PhysicalObject extends GameObject {
     constructor(root) {
         super();
 
@@ -38,7 +38,7 @@ export default class Object extends GameObject {
         this.usePhysics = true;
         this.useGravity = true;
 
-        this.attributes = {};
+        this.attributes = new Map();
     }
 
     addChild(obj) {
@@ -142,7 +142,7 @@ export default class Object extends GameObject {
     }
 
     setAttribute(key, value) {
-        this.attributes[key] = value;
+        this.attributes.set(key, value);
         return this;
     }
 

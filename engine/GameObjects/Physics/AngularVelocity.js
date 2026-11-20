@@ -1,5 +1,5 @@
-import { Vector3 } from "../Util/Math.js";
-import GameObject from "./GameObject.js";
+import { Vector3 } from "../../Util/Math.js";
+import GameObject from "../GameObject.js";
 
 export default class AngularVelocity extends GameObject {
     constructor(name) {
