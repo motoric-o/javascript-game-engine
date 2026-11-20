@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import Physics from "./Core/Physics.js";
 import Debris from "./GameObjects/Debris.js";
+import Camera from "./GameObjects/Camera.js";
 
 export default class Game {
     constructor(params) {
@@ -35,23 +36,24 @@ export default class Game {
         this.sceneManager = null;
         this.inputManager = null;
         this.physics = new Physics();
-        this.camera = null;
+        this.camera = new Camera(this.settings.width / this.settings.height);
         this.uiManager = null;
-
+        
         this.clock = 0;
         this.previous = 0;
         this.accumulated = 0;
-
+        
         this.state = "";
         this.isRunning = false;
         this.animationFrameId = null;
-
+        
         this.dynamicObjects = [];
         this.staticObjects = [];
-
+        
         this.stepped = [];
-
+        
         window.addEventListener("resize", () => this.onResize());
+        this.addObject(this.camera);
     }
 
     start() {
@@ -126,8 +128,7 @@ export default class Game {
             this.clock += this.settings.tickRate;
         }
 
-        // rendering updates go here
-        // this.renderer.render(this.sceneManager.currentScene, this.camera.cameraObject)
+        this.renderer.render(this.sceneManager.currentScene, this.camera.root)
 
         this.animationFrameId = requestAnimationFrame((timestamp) => this.tick(timestamp));
 
@@ -167,10 +168,13 @@ export default class Game {
     }
 
     onResize() {
-        this.settings.width = this.settings.container.clientWidth;
-        this.settings.height = this.settings.container.clientHeight;
+        const width = this.settings.container.clientWidth;
+        const height = this.settings.container.clientHeight;
+
+        this.settings.width = width;
+        this.settings.height = height;
 
         this.renderer.setSize(this.settings.width, this.settings.height);
-        // camera onResize
+        this.camera.onResize(width, height)
     }
 }
