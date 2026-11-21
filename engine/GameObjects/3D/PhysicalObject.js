@@ -10,14 +10,14 @@ export default class PhysicalObject extends GameObject {
         super();
 
         this.root = root;
-        
+
         if (this.root?.userData) {
             this.root.userData.gameObject = this;
         }
 
         this.mass = 1;
         this.restitution = 0;
-        
+
         this.velocity = Vector3(0, 0, 0);
         this.velocities = [];
         this.angularVelocity = Vector3(0, 0, 0);
@@ -28,6 +28,7 @@ export default class PhysicalObject extends GameObject {
         this.hitbox = null;
         this.useHitbox = false;
         this.canCollide = true;
+        this.canTumble = false;
         this.collisionBlacklistObjects = [];
         this.collisionBlacklistTags = [];
 
@@ -37,6 +38,7 @@ export default class PhysicalObject extends GameObject {
 
         this.usePhysics = true;
         this.useGravity = true;
+        this.canTumble = true;
 
         this.attributes = new Map();
     }
@@ -69,7 +71,7 @@ export default class PhysicalObject extends GameObject {
         if (obj instanceof TargetAngle) {
             this.targetAngle = obj;
         }
-        
+
         return this;
     }
 
@@ -77,7 +79,7 @@ export default class PhysicalObject extends GameObject {
         if (obj.root?.isObject3D) {
             this.root.remove(obj.root);
         }
-        
+
         const idx = this.children.indexOf(obj);
         if (idx != -1) {
             this.children.splice(idx, 1);
@@ -118,6 +120,11 @@ export default class PhysicalObject extends GameObject {
 
     setCanCollide(canCollide) {
         this.canCollide = canCollide;
+        return this;
+    }
+
+    setCanTumble(canTumble) {
+        this.canTumble = canTumble;
         return this;
     }
 
@@ -175,7 +182,28 @@ export default class PhysicalObject extends GameObject {
     unbindOnCollisionEnded(fn) {
         const idx = this.onCollisionEnded.indexOf(fn);
         if (idx != -1) {
-            this.onCollisionEnded.splice(idx, 1);   
+            this.onCollisionEnded.splice(idx, 1);
         }
+    }
+
+    destroy() {
+        if (this.destroyed) {
+            return;
+        }
+
+        this.destroyed = true;
+
+        for (let bind of this.onDestroy) {
+            bind(this);
+        }
+
+        if (this.children.length > 0) {
+            for (let child of this.children) {
+                child.destroy();
+            }
+        }
+
+        this.onCollision = [];
+        this.onCollisionEnded = [];
     }
 }

@@ -4,6 +4,8 @@
  * 
  * prompt 2: help me rewrite the index.js to test several different physics scenarios, like dynamic vs static, 
  * dynamic vs dynamic, angled bounce, etc. each separated by interval. You may edit directly in the files
+ * 
+ * prompt 3: alright update the scenarios to add new test scenarios for the new features
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
@@ -80,9 +82,14 @@ const scenarios = [
         name: "1. Dynamic vs Static Bounce + Debris Auto-Destroy",
         duration: 4.5,
         run() {
-            const box = createBox({ pos: [-1.5, 6, 0], color: 0x4cc9f0, restitution: 0.7 });
-            box.addChild(new AngularVelocity("spin").setVelocity(Vector3(1.5, 2, 0.8)));
+            const box = createBox({ pos: [-1.5, 5.5, 0], color: 0x4cc9f0, restitution: 0.65 });
+            box.angularVelocity.set(1.5, 2, 0.8);
             spawnDynamic(box);
+
+            const spinner = createBox({ size: [0.7, 0.7, 0.7], pos: [-4.5, 3.5, -2], color: 0x818cf8 });
+            spinner.useGravity = false;
+            spinner.addChild(new AngularVelocity("spin").setVelocity(Vector3(1.5, 2, 0.8)));
+            spawnDynamic(spinner);
 
             const debris = createBox({ size: [0.6, 0.6, 0.6], pos: [2, 5, 0], color: 0xf72585, restitution: 0.5, debrisTimeout: 2.5 });
             debris.bindOnDestroy(() => console.log("  -> Debris auto-destroyed after 2.5s"));
@@ -129,6 +136,61 @@ const scenarios = [
             const target = new TargetPosition("glide").setTargetPosition(Vector3(4, 3.5, -2)).setDuration(3.5);
             mover.addChild(target);
             spawnDynamic(mover);
+        }
+    },
+    {
+        name: "5. Sensor Trigger (canCollide=false + onCollision / onCollisionEnded)",
+        duration: 4.5,
+        run() {
+            const sensorMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(2.5, 2.5, 2.5),
+                new THREE.MeshStandardMaterial({ color: 0xfacc15, transparent: true, opacity: 0.35 })
+            );
+            sensorMesh.position.set(0, 1.5, 0);
+            const sensor = new PhysicalObject(sensorMesh).setCanCollide(false);
+            spawnStatic(sensor);
+
+            const traveler = createBox({ size: [0.9, 0.9, 0.9], pos: [-5, 1.5, 0], color: 0x38bdf8 });
+            traveler.useGravity = false;
+            traveler.velocity.set(3.5, 0, 0);
+
+            traveler.bindOnCollision((self, other) => {
+                if (other === sensor) {
+                    console.log("  -> Entered sensor trigger!");
+                    self.root.material.color.setHex(0x4ade80);
+                }
+            });
+            traveler.bindOnCollisionEnded((self, other) => {
+                if (other === sensor) {
+                    console.log("  -> Exited sensor trigger!");
+                    self.root.material.color.setHex(0x38bdf8);
+                }
+            });
+
+            spawnDynamic(traveler);
+        }
+    },
+    {
+        name: "6. Rigid-Body Tumble-on-Bounce (Inertia + Friction Impulse)",
+        duration: 5.0,
+        run() {
+            const tumbler = createBox({ size: [1.2, 1.2, 1.2], pos: [0, 5.5, 2], rot: [0.35, 0.2, 0.55], color: 0xf472b6, restitution: 0.6 });
+            tumbler.bindOnCollision((self, other, contact) => {
+                console.log(`  -> Tumble impact at (${contact.point.x.toFixed(2)}, ${contact.point.y.toFixed(2)}, ${contact.point.z.toFixed(2)})`);
+            });
+            spawnDynamic(tumbler);
+        }
+    },
+    {
+        name: "7. Dynamic vs Dynamic Off-Center Tumble",
+        duration: 5.0,
+        run() {
+            const pillar = createBox({ size: [1.0, 2.2, 1.0], pos: [1.5, 1.1, 0], color: 0x34d399, mass: 2, restitution: 0.35 });
+            spawnDynamic(pillar);
+
+            const striker = createBox({ size: [0.9, 0.9, 0.9], pos: [-4.5, 2.1, 0.28], color: 0xf97316, mass: 1.5, restitution: 0.5 });
+            striker.velocity.set(8.5, 1.5, 0);
+            spawnDynamic(striker);
         }
     }
 ];
