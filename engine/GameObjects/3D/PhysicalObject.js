@@ -17,6 +17,9 @@ export default class PhysicalObject extends GameObject {
 
         this.mass = 1;
         this.restitution = 0;
+        this.friction = 0.5;
+        this.angularDamping = 0.8;
+        this.rollingResistance = 0.05;
 
         this.velocity = Vector3(0, 0, 0);
         this.velocities = [];
@@ -117,6 +120,21 @@ export default class PhysicalObject extends GameObject {
         return this;
     }
 
+    setFriction(friction) {
+        this.friction = friction;
+        return this;
+    }
+
+    setAngularDamping(damping) {
+        this.angularDamping = damping;
+        return this;
+    }
+
+    setRollingResistance(resistance) {
+        this.rollingResistance = resistance;
+        return this;
+    }
+
     setCanCollide(canCollide) {
         this.canCollide = canCollide;
         return this;
@@ -144,7 +162,9 @@ export default class PhysicalObject extends GameObject {
 
     setUseGravity(useGravity) {
         this.useGravity = useGravity;
-        this.usePhysics = useGravity;
+        if (useGravity) {
+            this.usePhysics = useGravity;
+        }
         return this;
     }
 
