@@ -6,6 +6,12 @@
  * dynamic vs dynamic, angled bounce, etc. each separated by interval. You may edit directly in the files
  * 
  * prompt 3: alright update the scenarios to add new test scenarios for the new features
+ * 
+ * prompt 4: alright one more tumble scenario, make a dynamic vs dynamic object tumble!
+ * 
+ * prompt 5: generate 3 more scenarios to check if this code is fool proof
+ * 
+ * prompt 6: lets try generating a few more test scenarios to proove the fool proofness of the code. Also update index with the latest AIGEN prompts
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
@@ -250,6 +256,58 @@ const scenarios = [
             // Unstable cube perched 40 deg on an edge (must tip over and settle flat, never freeze)
             const edgeCube = createBox({ size: [1.0, 1.0, 1.0], pos: [-3.5, Math.SQRT1_2 + 0.01, 3.0], rot: [0, 0, 0.70], color: 0xa3e635, mass: 1.0, restitution: 0.3 });
             spawnDynamic(edgeCube);
+        }
+    },
+    {
+        name: "11. Mid-Air 3D Skewed Edge/Corner Collision",
+        duration: 5.0,
+        run() {
+            const boxA = createBox({ size: [1.1, 1.1, 1.1], pos: [-3.5, 3.8, 0.15], rot: [0.6, 0.5, 0.4], color: 0x38bdf8, mass: 1.5, restitution: 0.65 });
+            boxA.velocity.set(5.5, 2.2, 0);
+            spawnDynamic(boxA);
+
+            const boxB = createBox({ size: [1.1, 1.1, 1.1], pos: [3.5, 3.8, -0.15], rot: [-0.5, 0.7, -0.3], color: 0xfb7185, mass: 1.5, restitution: 0.65 });
+            boxB.velocity.set(-5.5, 2.2, 0);
+            spawnDynamic(boxB);
+        }
+    },
+    {
+        name: "12. High Mass-Ratio Stack (10:1 Heavy Slab on Light Crates)",
+        duration: 5.0,
+        run() {
+            const crateL = createBox({ size: [0.9, 1.0, 0.9], pos: [-1.1, 0.5, 0], color: 0x60a5fa, mass: 1.0, restitution: 0.2 });
+            const crateR = createBox({ size: [0.9, 1.0, 0.9], pos: [ 1.1, 0.5, 0], color: 0x60a5fa, mass: 1.0, restitution: 0.2 });
+            const slab   = createBox({ size: [3.4, 0.45, 1.2], pos: [0.0, 2.2, 0], color: 0xf59e0b, mass: 10.0, restitution: 0.15 });
+            spawnDynamic(crateL);
+            spawnDynamic(crateR);
+            spawnDynamic(slab);
+        }
+    },
+    {
+        name: "13. Pinball Walls + Collision Blacklist Ghost Box",
+        duration: 5.0,
+        run() {
+            const wallL = createBox({ size: [0.4, 2.4, 5.0], pos: [-3.2, 1.2, 0], rot: [0, 0.25, 0], color: 0x64748b, restitution: 0.8 });
+            const wallR = createBox({ size: [0.4, 2.4, 5.0], pos: [ 3.2, 1.2, 0], rot: [0, -0.25, 0], color: 0x64748b, restitution: 0.8 });
+            spawnStatic(wallL);
+            spawnStatic(wallR);
+
+            // Bounces rapidly between both angled walls
+            const pinball = createBox({ size: [0.8, 0.8, 0.8], pos: [0, 0.8, 1.0], color: 0x4ade80, mass: 1.0, restitution: 0.85 });
+            pinball.velocity.set(8.5, 0.5, -1.2);
+            spawnDynamic(pinball);
+
+            // Blacklists both walls so it passes right through them while still colliding with the floor
+            const ghostMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                new THREE.MeshStandardMaterial({ color: 0xc084fc, transparent: true, opacity: 0.5 })
+            );
+            ghostMesh.position.set(-4.5, 1.2, -1.2);
+            const ghost = new PhysicalObject(ghostMesh);
+            ghost.restitution = 0.5;
+            ghost.velocity.set(4.5, 0, 0);
+            ghost.collisionBlacklistObjects.push(wallL, wallR);
+            spawnDynamic(ghost);
         }
     }
 ];

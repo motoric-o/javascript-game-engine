@@ -422,6 +422,7 @@ export default class Physics {
      * prompt 3: we're close, but rotation goes wrong when momentum is near stopping -> multi-point contact manifold + face-axis bias + sequential impulse
      * prompt 4: wire the canTumble functionality to toggle this feature on and off -> zero inverse inertia when canTumble is false
      * prompt 5: Everything else tumbles normally except scenario 1 (same-orientation double bounce) -> per-vertex depth tracking + leading-corner filtering + adaptive Jacobi relaxation
+     * prompt 6: scenario 13 green box constant micro-bouncing -> raise restitution velocity threshold to -1.0
      */
     getContactPoints(obbA, obbB, normal, bestIndex) {
         // Edge-edge collision: single clamped midpoint
@@ -645,7 +646,7 @@ export default class Physics {
             const r = p.clone().sub(obj.root.position);
             const vp = this.getTotalVelocity(obj).add(this.getTotalAngularVelocity(obj).cross(r));
             const vn0 = vp.dot(contact.normal);
-            const bounceVel = vn0 < -0.4 ? -e * vn0 : 0;
+            const bounceVel = vn0 < -1.5 ? -e * vn0 : 0;
             const rCrossN = r.clone().cross(contact.normal);
             const rCrossT1 = r.clone().cross(t1);
             const rCrossT2 = r.clone().cross(t2);
@@ -694,7 +695,7 @@ export default class Physics {
             const vpA = this.getTotalVelocity(objA).add(this.getTotalAngularVelocity(objA).cross(rA));
             const vpB = this.getTotalVelocity(objB).add(this.getTotalAngularVelocity(objB).cross(rB));
             const vn0 = vpA.sub(vpB).dot(contact.normal);
-            const bounceVel = vn0 < -0.4 ? -e * vn0 : 0;
+            const bounceVel = vn0 < -1.0 ? -e * vn0 : 0;
 
             const rACrossN = rA.clone().cross(contact.normal);
             const rBCrossN = rB.clone().cross(contact.normal);
