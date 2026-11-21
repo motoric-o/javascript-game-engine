@@ -12,23 +12,27 @@ export default class Physics {
     }
 
     /** AIMOD
-     * context: the tumble still messes up across scenarios 1-4 (stacked boxes walking left because static and dynamic contacts were solved in isolated single passes)
-     * 
-     * execution: Help apply fixes based on the scenario fails (collect all resolvable contacts and solve them together in a unified iterative constraint solver)
+     * prompt 1: the tumble still messes up across scenarios 1-4, and scenario 8 dominoes jitter and walk apart -> semi-implicit Euler order + unified constraint solver
+     * prompt 2: Everything else tumbles normally except scenario 1 (double-bounce with same orientation) -> leading-corner filtering + adaptive Jacobi relaxation
      */
     update(dt, dynamicObjects, staticObjects) {
         this.currentCollisions = new Map();
 
-        // Integrated Physics
+        // Step 1: Integrate velocities (gravity, angular damping) & run per-object stepped callbacks
         for (let obj of dynamicObjects) {
             if (obj.usePhysics || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition?.enabled || obj.targetAngle?.enabled || obj.stepped.length > 0) {
-                this.updateObj(dt, obj);
+                this.integrateVelocities(dt, obj);
             }
+            obj.root.updateMatrixWorld();
+        }
+
+        for (let statObj of staticObjects) {
+            statObj.root.updateMatrixWorld();
         }
 
         const constraints = [];
 
-        // Dynamic vs Static object collision checks
+        // Step 2: Detect collisions (Dynamic vs Static & Dynamic vs Dynamic)
         for (let obj of dynamicObjects) {
             for (let statObj of staticObjects) {
                 if (obj.collisionBlacklistObjects.includes(statObj)) {
@@ -46,7 +50,6 @@ export default class Physics {
             }
         }
 
-        // Dynamic vs Dynamic objects collision checks
         for (let i = 0; i < dynamicObjects.length - 1; i++) {
             const objA = dynamicObjects[i];
 
@@ -68,8 +71,16 @@ export default class Physics {
             }
         }
 
+        // Step 3: Solve all velocity & positional constraints together
         if (constraints.length > 0) {
             this.solveConstraints(constraints);
+        }
+
+        // Step 4: Integrate positions & rotations using the solved velocities
+        for (let obj of dynamicObjects) {
+            if (obj.usePhysics || obj.velocities.length > 0 || obj.velocity.lengthSq() > 0 || obj.angularVelocities.length > 0 || obj.angularVelocity.lengthSq() > 0 || obj.targetPosition?.enabled || obj.targetAngle?.enabled) {
+                this.integrateTransforms(dt, obj);
+            }
         }
 
         // On Collision Ended Event checks
@@ -95,6 +106,64 @@ export default class Physics {
         }
 
         this.activeCollisions = this.currentCollisions;
+    }
+
+    /** AIGEN
+     * prompt: All passed except the domino, the domino objects are "walking" slowly, all of them do small jitters of movements slowly moving them apart. Apply fixes to this
+     */
+    integrateVelocities(dt, obj) {
+        if (obj.usePhysics) {
+            if (obj.useGravity && !obj.targetPosition?.enabled) {
+                obj.velocity.addScaledVector(this.gravity, dt);
+            }
+
+            if (!obj.targetAngle?.enabled) {
+                const angularDamping = obj.angularDamping ?? 0.8;
+                obj.angularVelocity.multiplyScalar(Math.max(0, 1 - angularDamping * dt));
+            }
+        }
+
+        for (let bind of obj.stepped) {
+            bind(obj, dt);
+        }
+    }
+
+    integrateTransforms(dt, obj) {
+        if (!obj.usePhysics) {
+            return;
+        }
+
+        if (obj.targetPosition?.enabled) {
+            const task = obj.targetPosition;
+            const remaining = Math.max(task.duration - task.elapsed, dt);
+            const alpha = Math.min(dt / remaining, 1);
+            task.elapsed = Math.min(task.elapsed + dt, task.duration);
+            obj.root.position.lerp(task.targetPosition, alpha);
+        } else {
+            const totalVelocity = this.getTotalVelocity(obj);
+            obj.root.position.x += totalVelocity.x * dt;
+            obj.root.position.y += totalVelocity.y * dt;
+            obj.root.position.z += totalVelocity.z * dt;
+        }
+
+        if (obj.targetAngle?.enabled) {
+            const task = obj.targetAngle;
+            const remaining = Math.max(task.duration - task.elapsed, dt);
+            const alpha = Math.min(dt / remaining, 1);
+            task.elapsed = Math.min(task.elapsed + dt, task.duration);
+            obj.root.quaternion.slerp(task.targetAngle, alpha);
+        } else {
+            const totalVel = this.getTotalAngularVelocity(obj);
+            const speed = totalVel.length();
+            if (speed > 0) {
+                const axis = totalVel.divideScalar(speed);
+                const angle = speed * dt;
+                const deltaQuat = Quaternion().setFromAxisAngle(axis, angle);
+                obj.root.quaternion.premultiply(deltaQuat).normalize();
+            }
+        }
+
+        obj.root.updateMatrixWorld();
     }
 
     // USER
@@ -335,23 +404,24 @@ export default class Physics {
             bestAxis.negate();
         }
 
-        const points = this.getContactPoints(obbA, obbB, bestAxis, bestIndex);
+        const manifold = this.getContactPoints(obbA, obbB, bestAxis, bestIndex);
+        const points = manifold.map(item => item.p);
+        const depths = manifold.map(item => item.depth);
         const point = Vector3(0, 0, 0);
         for (const p of points) {
             point.add(p);
         }
         point.divideScalar(points.length);
 
-        return { normal: bestAxis, penetration: minOverlap, point, points };
+        return { normal: bestAxis, penetration: minOverlap, point, points, depths };
     }
 
     /** AIGEN
-     * prompt 1: it doesn't like an actual tumble, it bounces in the same axis and rotates one way on collide, how would the actual physics be coded and simulated? 
-     * Like velocity changes depending on which point touches the ground first -> I'll let you generate the code for this one, do it for the dynamic vs dynamic resolve as well.
-     * 
-     * prompt 2: alright I've seen the tumbling, but the tumbling still feels unrealistic. It looks like it doesn't lose momentum while tumbling on flat surfaces -> Help me apply the fixes
-     * 
-     * prompt 3: we're close, but it has problems when it's about to lose momentum. The rotation goes wrong when momentum is near stopping -> yes (multi-point contact manifold + face-axis bias + sequential impulse)
+     * prompt 1: it doesn't like an actual tumble, it bounces in the same axis and rotates one way on collide -> rigid-body rotational & friction impulse + inertia tensor
+     * prompt 2: alright I've seen the tumbling, but the tumbling still feels unrealistic on flat surfaces -> angular damping + rolling resistance
+     * prompt 3: we're close, but rotation goes wrong when momentum is near stopping -> multi-point contact manifold + face-axis bias + sequential impulse
+     * prompt 4: wire the canTumble functionality to toggle this feature on and off -> zero inverse inertia when canTumble is false
+     * prompt 5: Everything else tumbles normally except scenario 1 (same-orientation double bounce) -> per-vertex depth tracking + leading-corner filtering + adaptive Jacobi relaxation
      */
     getContactPoints(obbA, obbB, normal, bestIndex) {
         // Edge-edge collision: single clamped midpoint
@@ -371,7 +441,7 @@ export default class Physics {
 
             const cA = this.clampPointToOBB(pA, obbB);
             const cB = this.clampPointToOBB(pB, obbA);
-            return [cA.add(cB).multiplyScalar(0.5)];
+            return [{ p: cA.add(cB).multiplyScalar(0.5), depth: 0 }];
         }
 
         // Face collision: reference OBB owns the winning face axis, incident OBB supplies the clipped face vertices
@@ -427,8 +497,9 @@ export default class Physics {
             }
         }
 
-        // Keep clipped vertices behind or within slop of refOBB's face plane
-        const refPlaneLimit = refExtents[refAxisIdx] + 0.015;
+        // Keep clipped vertices behind or within slop of refOBB's face plane, recording penetration depth per vertex
+        const refFaceExtent = refExtents[refAxisIdx];
+        const refPlaneLimit = refFaceExtent + 0.015;
         const kept = [];
         let deepestDist = Infinity;
         let deepestPoint = null;
@@ -440,12 +511,12 @@ export default class Physics {
                 deepestPoint = p;
             }
             if (dist <= refPlaneLimit) {
-                kept.push({ p, dist });
+                kept.push({ p, dist, depth: refFaceExtent - dist });
             }
         }
 
         if (kept.length === 0) {
-            return [deepestPoint ?? this.clampPointToOBB(incFaceCenter, refOBB)];
+            return [{ p: deepestPoint ?? this.clampPointToOBB(incFaceCenter, refOBB), depth: Math.max(0, refFaceExtent - deepestDist) }];
         }
 
         if (kept.length > 4) {
@@ -453,7 +524,7 @@ export default class Physics {
             kept.length = 4;
         }
 
-        return kept.map(item => item.p);
+        return kept;
     }
 
     clipPolygonByPlane(poly, origin, planeNormal, limit) {
@@ -565,11 +636,12 @@ export default class Physics {
         const invMass = 1 / obj.mass;
         const invI = this.getWorldInvInertia(obj);
         const points = contact.points?.length > 0 ? contact.points : [contact.point];
+        const depths = contact.depths?.length === points.length ? contact.depths : points.map(() => contact.penetration);
         const [t1, t2] = this.getTangentBasis(contact.normal);
         const e = obj.restitution ?? 0;
         const mu = obj.friction ?? 0.5;
 
-        const contacts = points.map((p) => {
+        let contacts = points.map((p, idx) => {
             const r = p.clone().sub(obj.root.position);
             const vp = this.getTotalVelocity(obj).add(this.getTotalAngularVelocity(obj).cross(r));
             const vn0 = vp.dot(contact.normal);
@@ -579,6 +651,7 @@ export default class Physics {
             const rCrossT2 = r.clone().cross(t2);
             return {
                 r,
+                depth: depths[idx],
                 bounceVel,
                 vn0,
                 denomN: invMass + this.applyInvInertia(invI, rCrossN).cross(r).dot(contact.normal),
@@ -590,6 +663,16 @@ export default class Physics {
             };
         });
 
+        // On active high-speed impacts, keep only the leading contact vertices within 0.015 of the deepest point
+        // so discrete timestep penetration doesn't flatten corner impacts with trailing vertices
+        if (contacts.length > 1 && contacts.some(c => c.vn0 < -0.4)) {
+            const maxDepth = Math.max(...contacts.map(c => c.depth));
+            const leading = contacts.filter(c => c.depth >= maxDepth - 0.015);
+            if (leading.length > 0) {
+                contacts = leading;
+            }
+        }
+
         return { type: "static", obj, contact, invMass, invI, t1, t2, mu, contacts };
     }
 
@@ -600,11 +683,12 @@ export default class Physics {
         const invIA = this.getWorldInvInertia(objA);
         const invIB = this.getWorldInvInertia(objB);
         const points = contact.points?.length > 0 ? contact.points : [contact.point];
+        const depths = contact.depths?.length === points.length ? contact.depths : points.map(() => contact.penetration);
         const [t1, t2] = this.getTangentBasis(contact.normal);
         const e = Math.min(objA.restitution ?? 0, objB.restitution ?? 0);
         const mu = Math.min(objA.friction ?? 0.5, objB.friction ?? 0.5);
 
-        const contacts = points.map((p) => {
+        let contacts = points.map((p, idx) => {
             const rA = p.clone().sub(objA.root.position);
             const rB = p.clone().sub(objB.root.position);
             const vpA = this.getTotalVelocity(objA).add(this.getTotalAngularVelocity(objA).cross(rA));
@@ -622,6 +706,7 @@ export default class Physics {
             return {
                 rA,
                 rB,
+                depth: depths[idx],
                 bounceVel,
                 vn0,
                 denomN: totalInvMass
@@ -639,12 +724,20 @@ export default class Physics {
             };
         });
 
+        if (contacts.length > 1 && contacts.some(c => c.vn0 < -0.4)) {
+            const maxDepth = Math.max(...contacts.map(c => c.depth));
+            const leading = contacts.filter(c => c.depth >= maxDepth - 0.015);
+            if (leading.length > 0) {
+                contacts = leading;
+            }
+        }
+
         return { type: "dynamic", objA, objB, contact, invMassA, invMassB, totalInvMass, invIA, invIB, t1, t2, mu, contacts };
     }
 
     solveConstraints(constraints) {
-        const normalWarmup = 6;
-        const totalIterations = 16;
+        const normalWarmup = 8;
+        const totalIterations = 20;
 
         // Unified iterative velocity solver: simultaneous (Jacobi) per-manifold passes eliminate contact-order bias
         for (let iter = 0; iter < totalIterations; iter++) {
@@ -659,49 +752,89 @@ export default class Physics {
             }
         }
 
-        // Positional correction: resolve dynamic pairs first, then static floors so stacked objects never sink into static surfaces
-        const dynamicItems = constraints.filter(item => item.type === "dynamic");
-        const staticItems = constraints.filter(item => item.type === "static");
-
-        for (const item of dynamicItems) {
-            const corr = Math.max(item.contact.penetration - 0.0005, 0);
-            if (corr > 0) {
-                item.objA.root.position.addScaledVector(item.contact.normal, corr * (item.invMassA / item.totalInvMass));
-                item.objB.root.position.addScaledVector(item.contact.normal, -corr * (item.invMassB / item.totalInvMass));
-                item.objA.root.updateMatrixWorld();
-                item.objB.root.updateMatrixWorld();
+        // Coupled iterative positional correction: tracks accumulated per-body shifts so stacked/leaning bodies
+        // never push each other underground or ping-pong across ticks
+        const posShifts = new Map();
+        const getShift = (obj) => {
+            let s = posShifts.get(obj);
+            if (!s) {
+                s = Vector3(0, 0, 0);
+                posShifts.set(obj, s);
             }
-        }
+            return s;
+        };
 
-        for (const item of staticItems) {
-            const corr = Math.max(item.contact.penetration - 0.0005, 0);
-            if (corr > 0) {
-                item.obj.root.position.addScaledVector(item.contact.normal, corr);
-                item.obj.root.updateMatrixWorld();
-            }
-        }
+        const posIterations = 6;
+        const slop = 0.005;
+        const dynamicPercent = 0.35;
+        const staticPercent = 0.65;
 
-        // Rolling resistance & resting sleep (applied once per touched dynamic body)
-        // Only face contacts (>= 3 points) count as a stable rest. Edge (2 points) and corner (1 point) contacts are
-        // pivots that gravity must still be able to tip over, so they get no rolling resistance and never sleep.
-        const minStableContacts = 3;
-        const touched = new Set();
-        for (const item of constraints) {
-            const isStableFace = item.contacts.length >= minStableContacts;
-            const allResting = item.contacts.every(c => Math.abs(c.vn0) < 0.4);
-            const bodies = item.type === "static" ? [item.obj] : [item.objA, item.objB];
-
-            for (const obj of bodies) {
-                if (isStableFace && !touched.has(obj)) {
-                    touched.add(obj);
-                    obj.angularVelocity.multiplyScalar(1 - (obj.rollingResistance ?? 0.05));
+        for (let pIter = 0; pIter < posIterations; pIter++) {
+            for (const item of constraints) {
+                const n = item.contact.normal;
+                if (item.type === "dynamic") {
+                    const sA = getShift(item.objA);
+                    const sB = getShift(item.objB);
+                    const remaining = item.contact.penetration - (sA.clone().sub(sB)).dot(n);
+                    const corr = Math.max(remaining - slop, 0) * dynamicPercent;
+                    if (corr > 0) {
+                        sA.addScaledVector(n, corr * (item.invMassA / item.totalInvMass));
+                        sB.addScaledVector(n, -corr * (item.invMassB / item.totalInvMass));
+                    }
+                } else {
+                    const s = getShift(item.obj);
+                    const remaining = item.contact.penetration - s.dot(n);
+                    const corr = Math.max(remaining - slop, 0) * staticPercent;
+                    if (corr > 0) {
+                        s.addScaledVector(n, corr);
+                    }
                 }
+            }
+        }
 
-                if (isStableFace && allResting) {
-                    if (obj.angularVelocity.lengthSq() < 0.02) {
+        for (const [obj, shift] of posShifts) {
+            if (shift.lengthSq() > 0) {
+                obj.root.position.add(shift);
+                obj.root.updateMatrixWorld();
+            }
+        }
+
+        // Aggregate per-body support across ALL constraints:
+        // >= 3 total contact points (either a flat face OR a leaning body supported by floor + neighbor) is stable;
+        // 1-point corner or 2-point single-edge pivots stay awake so gravity can tip them flat.
+        const bodyStats = new Map();
+        const recordBodyStat = (obj, count, resting) => {
+            let stat = bodyStats.get(obj);
+            if (!stat) {
+                stat = { points: 0, allResting: true };
+                bodyStats.set(obj, stat);
+            }
+            stat.points += count;
+            if (!resting) {
+                stat.allResting = false;
+            }
+        };
+
+        for (const item of constraints) {
+            const resting = item.contacts.every(c => Math.abs(c.vn0) < 0.4);
+            const count = item.contacts.length;
+            if (item.type === "static") {
+                recordBodyStat(item.obj, count, resting);
+            } else {
+                recordBodyStat(item.objA, count, resting);
+                recordBodyStat(item.objB, count, resting);
+            }
+        }
+
+        for (const [obj, stat] of bodyStats) {
+            if (stat.points >= 3) {
+                obj.angularVelocity.multiplyScalar(1 - (obj.rollingResistance ?? 0.05));
+
+                if (stat.allResting) {
+                    if (obj.angularVelocity.lengthSq() < 0.03) {
                         obj.angularVelocity.set(0, 0, 0);
                     }
-                    if (obj.velocity.lengthSq() < 0.005) {
+                    if (obj.velocity.lengthSq() < 0.008) {
                         obj.velocity.set(0, 0, 0);
                     }
                 }
@@ -713,7 +846,12 @@ export default class Physics {
         const normal = item.contact.normal;
         const { contacts } = item;
         const len = contacts.length;
-        const relax = 1 / len;
+        const linearMassSum = item.type === "static" ? item.invMass : item.totalInvMass;
+        let linearRatioSum = 0;
+        for (const c of contacts) {
+            linearRatioSum += linearMassSum / c.denomN;
+        }
+        const relax = len === 1 ? 1 : Math.min(0.65, 0.9 / Math.max(linearRatioSum, 1e-6));
 
         if (item.type === "static") {
             const { obj, invMass, invI } = item;
@@ -781,7 +919,12 @@ export default class Physics {
     solveFrictionPass(item) {
         const { t1, t2, mu, contacts } = item;
         const len = contacts.length;
-        const relax = 1 / len;
+        const linearMassSum = item.type === "static" ? item.invMass : item.totalInvMass;
+        let linearRatioSum = 0;
+        for (const c of contacts) {
+            linearRatioSum += linearMassSum / Math.min(c.denomT1, c.denomT2);
+        }
+        const relax = len === 1 ? 1 : Math.min(0.65, 0.9 / Math.max(linearRatioSum, 1e-6));
 
         if (item.type === "static") {
             const { obj, invMass, invI } = item;
@@ -885,7 +1028,7 @@ export default class Physics {
     }
 
     /** AIMOD
-     * prompt 1: it doesn't like an actual tumble, it bounces in the same axis and rotates one way on collide, how would the actual physics be coded and simulated? 
+     * prompt 1: it doesn't look like an actual tumble, it bounces in the same axis and rotates one way on collide, how would the actual physics be coded and simulated? 
      * Like velocity changes depending on which point touches the ground first -> I'll let you generate the code for this one, do it for the dynamic vs dynamic resolve as well.
      * 
      * prompt 2: alright I've seen the tumbling, but the tumbling still feels unrealistic. It looks like it doesn't lose momentum while tumbling on flat surfaces -> Help me apply the fixes

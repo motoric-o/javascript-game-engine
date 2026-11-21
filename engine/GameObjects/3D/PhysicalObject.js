@@ -28,7 +28,6 @@ export default class PhysicalObject extends GameObject {
         this.hitbox = null;
         this.useHitbox = false;
         this.canCollide = true;
-        this.canTumble = false;
         this.collisionBlacklistObjects = [];
         this.collisionBlacklistTags = [];
 

@@ -80,7 +80,7 @@ function spawnStatic(obj) {
 const scenarios = [
     {
         name: "1. Dynamic vs Static Bounce + Debris Auto-Destroy",
-        duration: 4.5,
+        duration: 6,
         run() {
             const box = createBox({ pos: [-1.5, 5.5, 0], color: 0x4cc9f0, restitution: 0.65 });
             box.angularVelocity.set(1.5, 2, 0.8);
@@ -191,6 +191,65 @@ const scenarios = [
             const striker = createBox({ size: [0.9, 0.9, 0.9], pos: [-4.5, 2.1, 0.28], color: 0xf97316, mass: 1.5, restitution: 0.5 });
             striker.velocity.set(8.5, 1.5, 0);
             spawnDynamic(striker);
+        }
+    },
+    {
+        name: "8. Domino Chain Reaction (Multi-Body Dynamic Cascade)",
+        duration: 5.5,
+        run() {
+            const colors = [0xef4444, 0xf59e0b, 0x10b981, 0x3b82f6];
+            for (let i = 0; i < 4; i++) {
+                const domino = createBox({
+                    size: [0.35, 2.0, 1.1],
+                    pos: [-1.5 + i * 1.25, 1.0, 0],
+                    color: colors[i],
+                    mass: 1.2,
+                    restitution: 0.25
+                });
+                spawnDynamic(domino);
+            }
+
+            const striker = createBox({ size: [0.7, 0.7, 0.7], pos: [-5.0, 1.65, 0], color: 0xe879f9, mass: 1.5, restitution: 0.3 });
+            striker.velocity.set(7.5, 1.0, 0);
+            spawnDynamic(striker);
+        }
+    },
+    {
+        name: "9. Ledge Overhang Tip-Off vs canTumble=false Comparison",
+        duration: 5.0,
+        run() {
+            const ledgeA = createBox({ size: [3.5, 2.0, 2.0], pos: [-2.5, 1.0, -2.0], color: 0x475569 });
+            const ledgeB = createBox({ size: [3.5, 2.0, 2.0], pos: [-2.5, 1.0,  2.0], color: 0x475569 });
+            spawnStatic(ledgeA);
+            spawnStatic(ledgeB);
+
+            // Ledge right edge is at x = -0.75; box width = 1.6 (half = 0.8), center at -0.55 overhangs past COM
+            const tumbleBox = createBox({ size: [1.6, 0.9, 1.0], pos: [-0.55, 2.55, -2.0], color: 0x22d3ee, mass: 1.5, restitution: 0.3 }).setCanTumble(true);
+            const lockedBox = createBox({ size: [1.6, 0.9, 1.0], pos: [-0.55, 2.55,  2.0], color: 0xfb923c, mass: 1.5, restitution: 0.3 }).setCanTumble(false);
+            spawnDynamic(tumbleBox);
+            spawnDynamic(lockedBox);
+        }
+    },
+    {
+        name: "10. 3-Box Pyramid Knockdown + Unstable Edge-Balance Recovery",
+        duration: 5.5,
+        run() {
+            // Pyramid: 2 base boxes + 1 top box
+            const baseL = createBox({ size: [1.1, 1.1, 1.1], pos: [1.0, 0.55, -0.75], color: 0x60a5fa, mass: 1.5, restitution: 0.25 });
+            const baseR = createBox({ size: [1.1, 1.1, 1.1], pos: [1.0, 0.55,  0.75], color: 0x60a5fa, mass: 1.5, restitution: 0.25 });
+            const cap   = createBox({ size: [1.0, 0.9, 2.2], pos: [1.0, 1.6,   0.0 ], color: 0xf43f5e, mass: 1.2, restitution: 0.25 });
+            spawnDynamic(baseL);
+            spawnDynamic(baseR);
+            spawnDynamic(cap);
+
+            // Wrecker hitting the pyramid
+            const wrecker = createBox({ size: [1.0, 1.0, 1.0], pos: [-2.8, 1.5, 0.25], color: 0xfacc15, mass: 3.0, restitution: 0.4 });
+            wrecker.velocity.set(9.5, 1.5, 0);
+            spawnDynamic(wrecker);
+
+            // Unstable cube perched 40 deg on an edge (must tip over and settle flat, never freeze)
+            const edgeCube = createBox({ size: [1.0, 1.0, 1.0], pos: [-3.5, Math.SQRT1_2 + 0.01, 3.0], rot: [0, 0, 0.70], color: 0xa3e635, mass: 1.0, restitution: 0.3 });
+            spawnDynamic(edgeCube);
         }
     }
 ];
