@@ -50,6 +50,9 @@ export default class SceneManager {
             game.stepped = game.stepped.filter(item => !this.currentScene.stepped.includes(item));
             game.dynamicObjects = game.dynamicObjects.filter(item => !this.currentScene.dynamicObjects.includes(item));
             game.staticObjects = game.staticObjects.filter(item => !this.currentScene.staticObjects.includes(item));
+
+            game.physics.currentCollisions.clear();
+            game.physics.activeCollisions.clear();
         }
 
         this.currentScene = nextScene;

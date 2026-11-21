@@ -8,17 +8,17 @@ export default class GameScene {
         this.root = new THREE.Scene();
         this.camera = camera || new GameCamera();
 
-        this.addObject(this.camera);
-
+        
         this.data = new Map();
-
+        
         this.dynamicObjects = [];
         this.staticObjects = [];
-
+        
         this.onEnter = [];
         this.stepped = [];
         this.onExit = [];
-
+        
+        this.addObject(this.camera);
     }
 
     setCamera(camera) {
