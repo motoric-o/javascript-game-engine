@@ -16,6 +16,8 @@
  * prompt 7: try generate another few tests, I really want to see this code very-very solid and adjusted for a lot of scenarios.
  * 
  * prompt 8: remove/merge redundant scenarios (1+6, 7+11, and 12+14)
+ * 
+ * prompt 9: test tags blacklisting along with scenario 11
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
@@ -282,27 +284,39 @@ const scenarios = [
         }
     },
     {
-        name: "11. Pinball Walls + Collision Blacklist Ghost Box",
-        duration: 5.0,
+        name: "11. Pinball Walls + Object & Tag Collision Blacklist Ghosts",
+        duration: 8.0,
         run() {
-            const wallL = createBox({ size: [0.4, 2.4, 5.0], pos: [-3.2, 1.2, 0], rot: [0, 0.25, 0], color: 0x64748b, restitution: 0.8 });
-            const wallR = createBox({ size: [0.4, 2.4, 5.0], pos: [ 3.2, 1.2, 0], rot: [0, -0.25, 0], color: 0x64748b, restitution: 0.8 });
+            const wallL = createBox({ size: [0.4, 2.4, 5.0], pos: [-3.2, 1.2, 0], rot: [0, 0.25, 0], color: 0x64748b, restitution: 0.8 }).setTag("wall");
+            const wallR = createBox({ size: [0.4, 2.4, 5.0], pos: [ 3.2, 1.2, 0], rot: [0, -0.25, 0], color: 0x64748b, restitution: 0.8 }).setTag("wall");
             spawnStatic(wallL);
             spawnStatic(wallR);
 
-            const pinball = createBox({ size: [0.8, 0.8, 0.8], pos: [0, 0.8, 1.0], color: 0x4ade80, mass: 1.0, restitution: 0.85 });
+            const pinball = createBox({ size: [0.8, 0.8, 0.8], pos: [0, 0.8, 1.5], color: 0x4ade80, mass: 1.0, restitution: 0.85 });
             pinball.velocity.set(8.5, 0.5, -1.2);
             spawnDynamic(pinball);
 
-            const ghostMesh = new THREE.Mesh(
+            // Purple ghost: blacklists walls by object reference
+            const objGhostMesh = new THREE.Mesh(
                 new THREE.BoxGeometry(0.8, 0.8, 0.8),
                 new THREE.MeshStandardMaterial({ color: 0xc084fc, transparent: true, opacity: 0.5 })
             );
-            ghostMesh.position.set(-4.5, 1.2, -1.2);
-            const ghost = new PhysicalObject(ghostMesh).setRestitution(0.5);
-            ghost.velocity.set(4.5, 0, 0);
-            ghost.collisionBlacklistObjects.push(wallL, wallR);
-            spawnDynamic(ghost);
+            objGhostMesh.position.set(-4.5, 1.2, -1.2);
+            const objGhost = new PhysicalObject(objGhostMesh).setRestitution(0.5);
+            objGhost.velocity.set(4.5, 0, 0);
+            objGhost.collisionBlacklistObjects.push(wallL, wallR);
+            spawnDynamic(objGhost);
+
+            // Cyan ghost: blacklists walls by "wall" tag
+            const tagGhostMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                new THREE.MeshStandardMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.5 })
+            );
+            tagGhostMesh.position.set(4.5, 1.2, 0.0);
+            const tagGhost = new PhysicalObject(tagGhostMesh).setRestitution(0.5);
+            tagGhost.velocity.set(-4.5, 0, 0);
+            tagGhost.collisionBlacklistTags.push("wall");
+            spawnDynamic(tagGhost);
         }
     },
     {
@@ -386,6 +400,7 @@ game.bindToUpdate((dt) => {
     if (elapsed >= scenarios[currentIndex].duration) {
         elapsed = 0;
         currentIndex = (currentIndex + 1) % scenarios.length;
+        // currentIndex = 10;
         startScenario(currentIndex);
     }
 });

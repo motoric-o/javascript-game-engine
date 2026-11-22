@@ -35,7 +35,14 @@ export default class Physics {
         // Step 2: Detect collisions (Dynamic vs Static & Dynamic vs Dynamic)
         for (let obj of dynamicObjects) {
             for (let statObj of staticObjects) {
-                if (obj.collisionBlacklistObjects.includes(statObj)) {
+                if (obj.collisionBlacklistObjects.includes(statObj) || statObj.collisionBlacklistObjects.includes(obj)) {
+                    continue;
+                }
+
+                const statTag = obj.collisionBlacklistTags.some(tag => statObj.tags.includes(tag));
+                const objTag = statObj.collisionBlacklistTags.some(tag => obj.tags.includes(tag));
+
+                if (statTag || objTag) {
                     continue;
                 }
 
@@ -57,6 +64,13 @@ export default class Physics {
                 const objB = dynamicObjects[j];
 
                 if (objA.collisionBlacklistObjects.includes(objB) || objB.collisionBlacklistObjects.includes(objA)) {
+                    continue;
+                }
+
+                const objATag = objB.collisionBlacklistTags.some(tag => objA.tags.includes(tag));
+                const objBTag = objA.collisionBlacklistTags.some(tag => objB.tags.includes(tag));
+
+                if (objATag || objBTag) {
                     continue;
                 }
 
