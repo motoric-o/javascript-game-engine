@@ -3,6 +3,7 @@ import * as THREE from "three";
 import Physics from "./Core/Physics.js";
 import Debris from "./GameObjects/3D/Debris.js";
 import SceneManager from "./Core/SceneManager.js";
+import InputManager from "./Core/InputManager.js";
 
 export default class Game {
     constructor(params) {
@@ -36,7 +37,7 @@ export default class Game {
         this.settings.container.appendChild(this.renderer.domElement);
 
         this.sceneManager = new SceneManager();
-        this.inputManager = null;
+        this.inputManager = new InputManager(this.renderer.domElement);
         this.physics = new Physics();
         this.camera = null;
         this.uiManager = null;
@@ -136,6 +137,8 @@ export default class Game {
                 bind(this.settings.tickRate, this.clock);
             }
 
+            this.inputManager.update();
+
             this.accumulated -= this.settings.tickRate;
             this.clock += this.settings.tickRate;
         }
@@ -188,8 +191,13 @@ export default class Game {
     }
 
     onResize() {
-        const width = this.settings.container.clientWidth;
-        const height = this.settings.container.clientHeight;
+        let width = this.settings.container.clientWidth;
+        let height = this.settings.container.clientHeight;
+
+        if (this.settings.container == document.body) {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
 
         this.settings.width = width;
         this.settings.height = height;
