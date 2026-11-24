@@ -41,8 +41,6 @@ export default class PhysicalObject extends GameObject {
         this.usePhysics = true;
         this.useGravity = true;
         this.canTumble = true;
-
-        this.attributes = new Map();
     }
 
     addChild(obj) {
@@ -165,11 +163,6 @@ export default class PhysicalObject extends GameObject {
         if (useGravity) {
             this.usePhysics = useGravity;
         }
-        return this;
-    }
-
-    setAttribute(key, value) {
-        this.attributes.set(key, value);
         return this;
     }
 

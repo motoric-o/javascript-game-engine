@@ -14,6 +14,9 @@ export default class GameObject {
         this.enabled = true;
 
         this.static = false;
+
+        this.attributes = new Map();
+
         this.destroyed = false;
     }
 
@@ -91,6 +94,16 @@ export default class GameObject {
 
     setStatic(isStatic) {
         this.static = isStatic;
+        return this;
+    }
+
+    setAttribute(key, value) {
+        this.attributes.set(key, value);
+        return this;
+    }
+
+    removeAttribute(key) {
+        this.attributes.delete(key);
         return this;
     }
 
