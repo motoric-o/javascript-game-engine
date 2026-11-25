@@ -12,8 +12,6 @@ export default class GameCamera extends PhysicalObject {
         const root = new THREE.PerspectiveCamera(fov, aspect, near, far);
         super(root);
 
-        this.usePhysics = true;
-        this.useGravity = false;
         this.canCollide = false;
 
         /** AIGEN

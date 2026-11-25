@@ -7,7 +7,10 @@ import TargetPosition from "../Physics/TargetPosition.js";
 import Velocity from "../Physics/Velocity.js";
 
 export default class PhysicalObject extends GameObject {
-    constructor(root) {
+    /** AIMOD
+     * prompt: remove useGravity and canTumble; accept optional rigidBodyDesc and colliderDesc in constructor
+     */
+    constructor(root, rigidBodyDesc = null, colliderDesc = null) {
         super();
 
         this.root = root;
@@ -21,13 +24,14 @@ export default class PhysicalObject extends GameObject {
         this.friction = 0.5;
         this.linearDamping = 0;
         this.angularDamping = 0.8;
-        this.rollingResistance = 0.05;
 
         /** AIGEN
-         * prompt: migrate physics engine to Rapier3D (handles & body/collider configuration) + make CharacterController a child GameObject of PhysicalObject
+         * prompt: migrate physics engine to Rapier3D (handles, descriptors, & body/collider configuration) + make CharacterController a child GameObject of PhysicalObject
          */
         this.rigidBody = null;
         this.collider = null;
+        this.rigidBodyDesc = rigidBodyDesc;
+        this.colliderDesc = colliderDesc;
         this.characterController = null;
         this.bodyType = "dynamic"; // "dynamic" | "fixed" | "kinematicPosition" | "kinematicVelocity"
         this.colliderShape = "box"; // "box" | "sphere" | "capsule" | "trimesh" | "convexHull"
@@ -41,8 +45,6 @@ export default class PhysicalObject extends GameObject {
         this.targetPosition = null;
         this.targetAngle = null;
 
-        this.hitbox = null;
-        this.useHitbox = false;
         this.canCollide = true;
         this.collisionBlacklistObjects = [];
         this.collisionBlacklistTags = [];
@@ -50,10 +52,6 @@ export default class PhysicalObject extends GameObject {
         // Collision Event Binds
         this.onCollision = [];
         this.onCollisionEnded = [];
-
-        this.usePhysics = true;
-        this.useGravity = true;
-        this.canTumble = true;
     }
 
     addChild(obj) {
@@ -182,53 +180,10 @@ export default class PhysicalObject extends GameObject {
         return this;
     }
 
-    setRollingResistance(resistance) {
-        this.rollingResistance = resistance;
-        return this;
-    }
-
     setCanCollide(canCollide) {
         this.canCollide = canCollide;
         if (this.collider) {
             this.collider.setSensor(!canCollide);
-        }
-        return this;
-    }
-
-    setCanTumble(canTumble) {
-        this.canTumble = canTumble;
-        if (this.rigidBody) {
-            this.rigidBody.lockRotations(!canTumble, true);
-        }
-        return this;
-    }
-
-    // USER
-    setHitbox(obj) {
-        this.hitbox = obj;
-        return this;
-    }
-
-    setUseHitbox(useHitbox) {
-        this.useHitbox = useHitbox;
-        return this;
-    }
-
-    setUsePhysics(usePhysics) {
-        this.usePhysics = usePhysics;
-        return this;
-    }
-
-    /** AIMOD
-     * prompt: migrate physics engine to Rapier3D (sync gravityScale)
-     */
-    setUseGravity(useGravity) {
-        this.useGravity = useGravity;
-        if (useGravity) {
-            this.usePhysics = useGravity;
-        }
-        if (this.rigidBody) {
-            this.rigidBody.setGravityScale(useGravity ? 1 : 0, true);
         }
         return this;
     }

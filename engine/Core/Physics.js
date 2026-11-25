@@ -40,8 +40,9 @@ export default class Physics {
 
         obj.root.updateMatrixWorld(true);
 
-        const target = this.getColliderTarget(obj);
-        const colliderDesc = this.buildColliderDesc(obj, target);
+        const target = obj.root;
+        const hasCustomCollider = obj.colliderDesc != null;
+        const colliderDesc = hasCustomCollider ? obj.colliderDesc : this.buildColliderDesc(obj, target);
         if (!colliderDesc) {
             // Objects without geometry (e.g. GameCamera) skip Rapier body creation while still running stepped/targets
             return null;
@@ -51,20 +52,18 @@ export default class Physics {
         const worldQuat = target.getWorldQuaternion(Quaternion());
         const bodyType = obj.static ? "fixed" : (obj.bodyType ?? "dynamic");
 
-        let bodyDesc;
-        if (bodyType === "fixed") {
-            bodyDesc = RAPIER.RigidBodyDesc.fixed();
-        } else if (bodyType === "kinematicPosition") {
-            bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-        } else if (bodyType === "kinematicVelocity") {
-            bodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased();
-        } else {
-            bodyDesc = RAPIER.RigidBodyDesc.dynamic();
-            bodyDesc.setGravityScale(obj.useGravity ? 1.0 : 0.0);
-            bodyDesc.setLinearDamping(obj.linearDamping ?? 0);
-            bodyDesc.setAngularDamping(obj.angularDamping ?? 0.8);
-            if (obj.canTumble === false) {
-                bodyDesc.lockRotations();
+        let bodyDesc = obj.rigidBodyDesc;
+        if (!bodyDesc) {
+            if (bodyType === "fixed") {
+                bodyDesc = RAPIER.RigidBodyDesc.fixed();
+            } else if (bodyType === "kinematicPosition") {
+                bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+            } else if (bodyType === "kinematicVelocity") {
+                bodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased();
+            } else {
+                bodyDesc = RAPIER.RigidBodyDesc.dynamic();
+                bodyDesc.setLinearDamping(obj.linearDamping ?? 0);
+                bodyDesc.setAngularDamping(obj.angularDamping ?? 0.8);
             }
         }
 
@@ -82,12 +81,14 @@ export default class Physics {
             }
         }
 
-        colliderDesc.setRestitution(obj.restitution ?? 0);
-        colliderDesc.setFriction(obj.friction ?? 0.5);
-        if (bodyType === "dynamic" && obj.mass > 0) {
-            colliderDesc.setMass(obj.mass);
+        if (!hasCustomCollider) {
+            colliderDesc.setRestitution(obj.restitution ?? 0);
+            colliderDesc.setFriction(obj.friction ?? 0.5);
+            if (bodyType === "dynamic" && obj.mass > 0) {
+                colliderDesc.setMass(obj.mass);
+            }
+            colliderDesc.setSensor(!obj.canCollide);
         }
-        colliderDesc.setSensor(!obj.canCollide);
         colliderDesc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
         colliderDesc.setActiveCollisionTypes(
             RAPIER.ActiveCollisionTypes.DEFAULT |
@@ -310,10 +311,6 @@ export default class Physics {
                 bind(obj, dt);
             }
 
-            if (!obj.usePhysics) {
-                continue;
-            }
-
             // TargetPosition / TargetAngle interpolation (works for cameras, kinematic platforms, etc.)
             if (obj.targetPosition?.enabled) {
                 const task = obj.targetPosition;
@@ -493,14 +490,5 @@ export default class Physics {
             normal: Vector3(hit.normal.x, hit.normal.y, hit.normal.z),
             distance: hit.timeOfImpact
         };
-    }
-
-    // USER
-    getColliderTarget(obj) {
-        if (obj.useHitbox && obj.hitbox != null) {
-            return obj.hitbox.root;
-        }
-
-        return obj.root;
     }
 }
