@@ -58,7 +58,16 @@ export default class Game {
         window.addEventListener("resize", () => this.onResize());
     }
 
+    async init() {
+        await this.physics.init();
+    }
+
     start() {
+        if (!this.physics.isReady) {
+            console.error("ERROR: Physics engine is not initialized. Call await game.init() before calling game.start().");
+            return;
+        }
+
         if (this.settings.startScene != null && this.sceneManager.currentScene == null) {
             this.sceneManager.enterScene(this.settings.startScene, this);
         }
@@ -109,6 +118,7 @@ export default class Game {
                 }
 
                 if (object.destroyed) {
+                    this.physics.unregisterBody(object);
                     this.dynamicObjects.splice(i, 1);
                     this.sceneManager.currentScene.root.remove(object.root);
                 }
@@ -126,6 +136,7 @@ export default class Game {
                 }
 
                 if (object.destroyed) {
+                    this.physics.unregisterBody(object);
                     this.staticObjects.splice(i, 1);
                     this.sceneManager.currentScene.root.remove(object.root);
                 }
@@ -153,12 +164,19 @@ export default class Game {
         this.state = state;
     }
 
+    /** AIMOD
+     * prompt: migrate physics engine to Rapier3D (register bodies on addObject / addStaticObject)
+     */
     addObject(obj) {
         obj.setStatic(false);
-        this.dynamicObjects.push(obj); 
+        this.dynamicObjects.push(obj);
 
         if (this.sceneManager.currentScene != null && obj.root?.isObject3D) {
             this.sceneManager.currentScene.root.add(obj.root);
+        }
+
+        if (this.physics.isReady) {
+            this.physics.registerBody(obj);
         }
 
         for (let bind of obj.onSpawn) {
@@ -174,10 +192,16 @@ export default class Game {
             this.sceneManager.currentScene.root.add(obj.root);
         }
 
+        if (this.physics.isReady) {
+            this.physics.registerBody(obj);
+        }
+
         for (let bind of obj.onSpawn) {
             bind(obj);
         }
     }
+
+    // USER
 
     bindToUpdate(func) {
         this.stepped.push(func);

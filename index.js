@@ -13,6 +13,7 @@ const game = new Game({
     clearColor: 0x16162a,
     startScene: "input-test"
 });
+await game.init();
 
 const camera = new GameCamera();
 const scene = new GameScene("input-test", camera);

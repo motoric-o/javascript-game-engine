@@ -18,9 +18,20 @@ export default class PhysicalObject extends GameObject {
         this.mass = 1;
         this.restitution = 0;
         this.friction = 0.5;
+        this.linearDamping = 0;
         this.angularDamping = 0.8;
         this.rollingResistance = 0.05;
 
+        /** AIGEN
+         * prompt: migrate physics engine to Rapier3D (handles & body/collider configuration)
+         */
+        this.rigidBody = null;
+        this.collider = null;
+        this.bodyType = "dynamic"; // "dynamic" | "fixed" | "kinematicPosition" | "kinematicVelocity"
+        this.colliderShape = "box"; // "box" | "sphere" | "capsule" | "trimesh" | "convexHull"
+        this.colliderParams = null;
+
+        // USER
         this.velocity = Vector3(0, 0, 0);
         this.velocities = [];
         this.angularVelocity = Vector3(0, 0, 0);
@@ -108,23 +119,46 @@ export default class PhysicalObject extends GameObject {
         }
     }
 
+    /** AIMOD
+     * prompt: migrate physics engine to Rapier3D (live-sync setters with Rapier rigidBody/collider)
+     */
+    setStatic(isStatic) {
+        this.static = isStatic;
+        if (isStatic) {
+            this.bodyType = "fixed";
+        }
+        return this;
+    }
+
     setMass(mass) {
         this.mass = mass;
+        if (this.collider) {
+            this.collider.setMass(mass);
+        }
         return this;
     }
 
     setRestitution(restitution) {
         this.restitution = restitution;
+        if (this.collider) {
+            this.collider.setRestitution(restitution);
+        }
         return this;
     }
 
     setFriction(friction) {
         this.friction = friction;
+        if (this.collider) {
+            this.collider.setFriction(friction);
+        }
         return this;
     }
 
     setAngularDamping(damping) {
         this.angularDamping = damping;
+        if (this.rigidBody) {
+            this.rigidBody.setAngularDamping(damping);
+        }
         return this;
     }
 
@@ -135,14 +169,21 @@ export default class PhysicalObject extends GameObject {
 
     setCanCollide(canCollide) {
         this.canCollide = canCollide;
+        if (this.collider) {
+            this.collider.setSensor(!canCollide);
+        }
         return this;
     }
 
     setCanTumble(canTumble) {
         this.canTumble = canTumble;
+        if (this.rigidBody) {
+            this.rigidBody.lockRotations(!canTumble, true);
+        }
         return this;
     }
 
+    // USER
     setHitbox(obj) {
         this.hitbox = obj;
         return this;
@@ -158,13 +199,96 @@ export default class PhysicalObject extends GameObject {
         return this;
     }
 
+    /** AIMOD
+     * prompt: migrate physics engine to Rapier3D (sync gravityScale)
+     */
     setUseGravity(useGravity) {
         this.useGravity = useGravity;
         if (useGravity) {
             this.usePhysics = useGravity;
         }
+        if (this.rigidBody) {
+            this.rigidBody.setGravityScale(useGravity ? 1 : 0, true);
+        }
         return this;
     }
+
+    /** AIGEN
+     * prompt: migrate physics engine to Rapier3D (shape, bodyType, transform, velocity, and impulse helpers)
+     */
+    setBodyType(type) {
+        this.bodyType = type;
+        return this;
+    }
+
+    setColliderShape(shape, params = null) {
+        this.colliderShape = shape;
+        this.colliderParams = params;
+        return this;
+    }
+
+    setLinearDamping(damping) {
+        this.linearDamping = damping;
+        if (this.rigidBody) {
+            this.rigidBody.setLinearDamping(damping);
+        }
+        return this;
+    }
+
+    setPosition(x, y, z) {
+        this.root.position.set(x, y, z);
+        if (this.rigidBody) {
+            if (this.bodyType === "kinematicPosition") {
+                this.rigidBody.setNextKinematicTranslation({ x, y, z });
+            } else {
+                this.rigidBody.setTranslation({ x, y, z }, true);
+            }
+        }
+        return this;
+    }
+
+    getPosition() {
+        return this.root.position;
+    }
+
+    setRotation(x, y, z) {
+        this.root.rotation.set(x, y, z);
+        if (this.rigidBody) {
+            const q = this.root.quaternion;
+            const rot = { x: q.x, y: q.y, z: q.z, w: q.w };
+            if (this.bodyType === "kinematicPosition") {
+                this.rigidBody.setNextKinematicRotation(rot);
+            } else {
+                this.rigidBody.setRotation(rot, true);
+            }
+        }
+        return this;
+    }
+
+    setVelocity(x, y, z) {
+        this.velocity.set(x, y, z);
+        if (this.rigidBody) {
+            this.rigidBody.setLinvel({ x, y, z }, true);
+        }
+        return this;
+    }
+
+    setAngularVelocity(x, y, z) {
+        this.angularVelocity.set(x, y, z);
+        if (this.rigidBody) {
+            this.rigidBody.setAngvel({ x, y, z }, true);
+        }
+        return this;
+    }
+
+    applyImpulse(vec) {
+        if (this.rigidBody) {
+            this.rigidBody.applyImpulse({ x: vec.x, y: vec.y, z: vec.z }, true);
+        }
+        return this;
+    }
+
+    // USER
 
     bindOnCollision(fn) {
         if (this.static) {
