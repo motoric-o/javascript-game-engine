@@ -64,6 +64,7 @@ export default class SceneManager {
         this.currentScene = nextScene;
 
         game.camera = this.currentScene.camera;
+        game.camera.setPhysics(game.physics);
         game.camera.onResize(game.settings.width, game.settings.height);
 
         for (let object of game.dynamicObjects) {

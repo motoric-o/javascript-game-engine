@@ -1,5 +1,6 @@
 import { Vector3 } from "../../Util/Math.js";
 import AngularVelocity from "../Physics/AngularVelocity.js";
+import CharacterController from "../Physics/CharacterController.js";
 import GameObject from "../GameObject.js";
 import TargetAngle from "../Physics/TargetAngle.js";
 import TargetPosition from "../Physics/TargetPosition.js";
@@ -23,10 +24,11 @@ export default class PhysicalObject extends GameObject {
         this.rollingResistance = 0.05;
 
         /** AIGEN
-         * prompt: migrate physics engine to Rapier3D (handles & body/collider configuration)
+         * prompt: migrate physics engine to Rapier3D (handles & body/collider configuration) + make CharacterController a child GameObject of PhysicalObject
          */
         this.rigidBody = null;
         this.collider = null;
+        this.characterController = null;
         this.bodyType = "dynamic"; // "dynamic" | "fixed" | "kinematicPosition" | "kinematicVelocity"
         this.colliderShape = "box"; // "box" | "sphere" | "capsule" | "trimesh" | "convexHull"
         this.colliderParams = null;
@@ -83,6 +85,17 @@ export default class PhysicalObject extends GameObject {
             this.targetAngle = obj;
         }
 
+        /** AIMOD
+         * prompt: make CharacterController a child GameObject of PhysicalObject and auto-switch bodyType from dynamic to kinematicPosition
+         */
+        if (obj instanceof CharacterController) {
+            this.characterController = obj;
+            if (this.bodyType === "dynamic") {
+                this.bodyType = "kinematicPosition";
+            }
+        }
+
+        // USER
         return this;
     }
 
@@ -116,6 +129,13 @@ export default class PhysicalObject extends GameObject {
 
         if (obj instanceof TargetAngle) {
             this.targetAngle = null;
+        }
+
+        /** AIMOD
+         * prompt: detach CharacterController child from PhysicalObject
+         */
+        if (obj instanceof CharacterController && this.characterController === obj) {
+            this.characterController = null;
         }
     }
 

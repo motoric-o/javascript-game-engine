@@ -1,18 +1,19 @@
 // USER
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { Box3, Quaternion, Raycaster, Vector3 } from "../Util/index.js";
+/** AIMOD
+ * prompt: move raycastFromCamera to GameCamera and CharacterController to a child GameObject
+ */
+import { Box3, Quaternion, Vector3 } from "../Util/index.js";
 
+// USER
 export default class Physics {
     constructor() {
         this.gravity = Vector3(0, -9.81, 0);
         this.world = null;
         this.eventQueue = null;
 
-        this.raycaster = Raycaster();
-
         this.colliderMap = new Map();
-        this.characterControllers = new Map();
 
         this.isReady = false;
     }
@@ -100,7 +101,37 @@ export default class Physics {
         obj.collider = collider;
         this.colliderMap.set(collider.handle, obj);
 
+        if (obj.characterController) {
+            this.initCharacterController(obj);
+        }
+
         return rigidBody;
+    }
+
+    initCharacterController(obj) {
+        const cc = obj?.characterController;
+        if (!this.isReady || !cc || cc.controller != null || cc.destroyed) {
+            return null;
+        }
+
+        const controller = this.world.createCharacterController(cc.offset);
+        controller.setMaxSlopeClimbAngle(cc.maxSlopeClimbAngle);
+        controller.setMinSlopeSlideAngle(cc.minSlopeSlideAngle);
+        controller.enableAutostep(cc.autoStepHeight, cc.autoStepMinWidth, cc.autoStepIncludeDynamic);
+        controller.enableSnapToGround(cc.snapToGroundDist);
+        controller.setApplyImpulsesToDynamicBodies(cc.applyImpulsesToDynamicBodies);
+
+        cc.controller = controller;
+        return controller;
+    }
+
+    unregisterCharacterController(cc) {
+        if (!this.isReady || !cc || cc.controller == null) {
+            return;
+        }
+
+        this.world.removeCharacterController(cc.controller);
+        cc.controller = null;
     }
 
     unregisterBody(obj) {
@@ -108,9 +139,8 @@ export default class Physics {
             return;
         }
 
-        if (this.characterControllers.has(obj)) {
-            this.world.removeCharacterController(this.characterControllers.get(obj));
-            this.characterControllers.delete(obj);
+        if (obj.characterController) {
+            this.unregisterCharacterController(obj.characterController);
         }
 
         if (obj.collider != null) {
@@ -266,6 +296,14 @@ export default class Physics {
         for (const obj of dynamicObjects) {
             if (!obj.rigidBody && !obj.destroyed) {
                 this.registerBody(obj);
+            }
+
+            if (obj.characterController) {
+                if (obj.characterController.destroyed) {
+                    this.unregisterCharacterController(obj.characterController);
+                } else if (!obj.characterController.controller) {
+                    this.initCharacterController(obj);
+                }
             }
 
             for (const bind of obj.stepped) {
@@ -430,52 +468,6 @@ export default class Physics {
         return { normal, penetration, point };
     }
 
-    // RPG KinematicCharacterController helpers (slopes, stairs, auto-step, grounded)
-    createCharacterController(obj, { offset = 0.02, maxSlopeClimbAngle = 45 * Math.PI / 180, minSlopeSlideAngle = 30 * Math.PI / 180, autoStepHeight = 0.4, autoStepMinWidth = 0.25, snapToGroundDist = 0.3 } = {}) {
-        if (!this.isReady) {
-            return null;
-        }
-        if (!obj.rigidBody) {
-            obj.setBodyType("kinematicPosition");
-            this.registerBody(obj);
-        }
-
-        const controller = this.world.createCharacterController(offset);
-        controller.setMaxSlopeClimbAngle(maxSlopeClimbAngle);
-        controller.setMinSlopeSlideAngle(minSlopeSlideAngle);
-        controller.enableAutostep(autoStepHeight, autoStepMinWidth, true);
-        controller.enableSnapToGround(snapToGroundDist);
-        controller.setApplyImpulsesToDynamicBodies(true);
-
-        this.characterControllers.set(obj, controller);
-        return controller;
-    }
-
-    moveCharacter(obj, desiredTranslation) {
-        const controller = this.characterControllers.get(obj);
-        if (!controller || !obj.collider || !obj.rigidBody) {
-            return { grounded: false, translation: Vector3(0, 0, 0) };
-        }
-
-        controller.computeColliderMovement(obj.collider, {
-            x: desiredTranslation.x,
-            y: desiredTranslation.y,
-            z: desiredTranslation.z
-        });
-
-        const corrected = controller.computedMovement();
-        const pos = obj.rigidBody.translation();
-        const nextPos = { x: pos.x + corrected.x, y: pos.y + corrected.y, z: pos.z + corrected.z };
-
-        obj.rigidBody.setNextKinematicTranslation(nextPos);
-        obj.root.position.set(nextPos.x, nextPos.y, nextPos.z);
-
-        return {
-            grounded: controller.computedGrounded(),
-            translation: Vector3(corrected.x, corrected.y, corrected.z)
-        };
-    }
-
     raycast(origin, direction, maxDistance = 100, excludeObj = null) {
         if (!this.isReady) {
             return null;
@@ -501,16 +493,6 @@ export default class Physics {
             normal: Vector3(hit.normal.x, hit.normal.y, hit.normal.z),
             distance: hit.timeOfImpact
         };
-    }
-
-    raycastFromCamera(ndc, camera, maxDistance = 100, excludeObj = null) {
-        const camRoot = camera?.root ?? camera;
-        if (!camRoot) {
-            return null;
-        }
-
-        this.raycaster.setFromCamera(ndc, camRoot);
-        return this.raycast(this.raycaster.ray.origin, this.raycaster.ray.direction, maxDistance, excludeObj);
     }
 
     // USER
