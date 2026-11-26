@@ -175,7 +175,7 @@ export default class Game {
             this.clock += this.settings.tickRate;
         }
 
-        this.Debug.update(this.settings.tickRate, this);
+        this.Debug.update(delta, this);
 
         this.renderer.render(this.Scene.currentScene.root, this.camera.root)
 
