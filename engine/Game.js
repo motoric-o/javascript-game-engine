@@ -7,6 +7,7 @@ import InputManager from "./Core/InputManager.js";
 import EventManager from "./Core/EventManager.js";
 import DebugManager from "./Core/DebugManager.js";
 import UIManager from "./Core/UIManager.js";
+import SaveManager from "./Core/SaveManager.js";
 
 export default class Game {
     constructor(params) {
@@ -26,6 +27,8 @@ export default class Game {
 
             startScene: null,
 
+            savePrefix: "game_",
+
             debug: false
         }
 
@@ -44,6 +47,7 @@ export default class Game {
         this.Physics = new Physics();
         this.Event = new EventManager();
         this.Debug = new DebugManager(this.settings.debug);
+        this.Saves = new SaveManager(this.settings.savePrefix);
         this.UIManager = new UIManager();
         this.camera = null;
         
