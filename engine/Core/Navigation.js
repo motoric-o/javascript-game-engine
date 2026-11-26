@@ -43,14 +43,33 @@ export default class Navigation {
             return[]
         }
         
-        const wayPoint = this.pathfinder.findPath(
-            from,
-            to, 
+        /** AIMOD
+         * prompt: something's wrong, it's not chasing me / alright you can help me with that (snap from/to vertically onto closest NavMesh node so capsule center height doesn't break findPath)
+         */
+        const startNode = this.pathfinder.getClosestNode(from, zoneName, groupID);
+        const endNode = this.pathfinder.getClosestNode(to, zoneName, groupID);
+
+        const snappedFrom = startNode ? from.clone().setY(startNode.centroid.y) : from;
+        const snappedTo = endNode ? to.clone().setY(endNode.centroid.y) : to;
+
+        let wayPoint = this.pathfinder.findPath(
+            snappedFrom,
+            snappedTo,
             zoneName,
             groupID
         );
-        
-        return wayPoint?? [];
+
+        if (!wayPoint && startNode && endNode) {
+            wayPoint = this.pathfinder.findPath(
+                startNode.centroid,
+                endNode.centroid,
+                zoneName,
+                groupID
+            );
+        }
+
+        // USER
+        return wayPoint ?? [];
     }
 
     getClosestNode(position, zoneName) {

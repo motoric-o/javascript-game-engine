@@ -4,6 +4,7 @@
  * prompt 3: add bonfire ember + crate-kick spark ParticleEmitter tests in index.js
  * prompt 4: add more scenarios in the scene to test followTarget persistent trail and SaveManager save/load
  * prompt 5: make one more trail that's not persistent for the player to test the local space particles
+ * prompt 6: add a separated pathfinding test section at the bottom of index.js for Navigation and NavAgent
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
@@ -15,6 +16,8 @@ import CharacterController from "./engine/GameObjects/Physics/CharacterControlle
 import Debris from "./engine/GameObjects/3D/Debris.js";
 import ParticleEmitter from "./engine/GameObjects/3D/Particle.js";
 import UIElement from "./engine/GameObjects/UI/UIElement.js";
+import Navigation from "./engine/Core/Navigation.js";
+import NavAgent from "./engine/GameObjects/AI/NavAgent.js";
 import { Vector3, clamp } from "./engine/Util/Math.js";
 
 const game = new Game({
@@ -503,6 +506,71 @@ game.bindToUpdate((dt) => {
     );
     camera.lookAt(Vector3(target.x, target.y + 0.4, target.z));
 });
+
+// ==================== PATHFINDING TEST SECTION ====================
+/** AIGEN
+ * prompt: try to add it in a quite separated section of script, like at the bottom and marked with a comment indicating the only pathfinding code section
+ */
+const navigation = new Navigation();
+const navGeo = new THREE.PlaneGeometry(26, 26, 12, 12);
+navGeo.rotateX(-Math.PI / 2);
+navigation.loadNavMesh("arena", navGeo);
+
+const enemyMesh = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.4, 1.0, 8, 16),
+    new THREE.MeshStandardMaterial({ color: 0xef4444 })
+);
+enemyMesh.position.set(8, 1.5, -8);
+enemyMesh.castShadow = true;
+enemyMesh.receiveShadow = true;
+
+const enemy = new PhysicalObject(enemyMesh)
+    .setColliderShape("capsule", { halfHeight: 0.5, radius: 0.4 });
+
+const enemyCC = new CharacterController("EnemyCC")
+    .setOffset(0.02)
+    .setMaxSlopeClimbAngle(45 * Math.PI / 180)
+    .setSnapToGround(0.35);
+
+const enemyNav = new NavAgent("EnemyNav")
+    .setZone("arena")
+    .setStoppingDistance(1.8)
+    .setRepathInterval(0.25);
+
+enemy.addChild(enemyCC);
+enemy.addChild(enemyNav);
+scene.addObject(enemy);
+
+let enemyVerticalVel = 0;
+const ENEMY_SPEED = 3.6;
+
+game.bindToUpdate((dt) => {
+    if (!enemyCC.controller || !enemy.collider || !enemy.rigidBody) {
+        return;
+    }
+
+    const playerPos = player.getPosition();
+    enemyNav.setTarget(Vector3(playerPos.x, 0, playerPos.z));
+
+    const steerDir = enemyNav.update(dt, navigation);
+
+    if (enemyCC.grounded && enemyVerticalVel < 0) {
+        enemyVerticalVel = -0.5;
+    }
+    enemyVerticalVel += GRAVITY * dt;
+
+    const desired = {
+        x: steerDir.x * ENEMY_SPEED * dt,
+        y: enemyVerticalVel * dt,
+        z: steerDir.z * ENEMY_SPEED * dt
+    };
+
+    enemyCC.controller.computeColliderMovement(enemy.collider, desired, 8);
+    const corrected = enemyCC.controller.computedMovement();
+    const pos = enemy.rigidBody.translation();
+    enemy.setPosition(pos.x + corrected.x, pos.y + corrected.y, pos.z + corrected.z);
+});
+// ==================== END PATHFINDING TEST SECTION ====================
 
 game.Scene.addScene(scene);
 game.start();
