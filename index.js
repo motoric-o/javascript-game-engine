@@ -1,6 +1,9 @@
 /** AIGEN
  * prompt 1: make a branch to test these new features. Make a scenario like the current index.js, but now adjusted for the new version of the engine (Rapier3D, CharacterController child GameObject, GameCamera.raycast(), sensors, slopes/stairs)
  * prompt 2: Before committing, update index js to test these new features (EventManager, Environment, DebugManager)
+ * prompt 3: add bonfire ember + crate-kick spark ParticleEmitter tests in index.js
+ * prompt 4: add more scenarios in the scene to test followTarget persistent trail and SaveManager save/load
+ * prompt 5: make one more trail that's not persistent for the player to test the local space particles
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
@@ -10,6 +13,7 @@ import GameCamera from "./engine/GameObjects/3D/GameCamera.js";
 import PhysicalObject from "./engine/GameObjects/3D/PhysicalObject.js";
 import CharacterController from "./engine/GameObjects/Physics/CharacterController.js";
 import Debris from "./engine/GameObjects/3D/Debris.js";
+import ParticleEmitter from "./engine/GameObjects/3D/Particle.js";
 import UIElement from "./engine/GameObjects/UI/UIElement.js";
 import { Vector3, clamp } from "./engine/Util/Math.js";
 
@@ -113,6 +117,47 @@ sensorMesh.add(bonfireCore);
 const sensorZone = new PhysicalObject(sensorMesh).setCanCollide(false);
 scene.addStaticObject(sensorZone);
 
+/** AIGEN
+ * prompt: Want me to add a quick bonfire ember + crate-kick spark test in index.js before committing? / yes lets do that
+ */
+// Continuous bonfire embers at the checkpoint zone
+const bonfireEmbers = new ParticleEmitter({
+    position: Vector3(0, 0.9, -7),
+    maxParticles: 120,
+    rate: 25,
+    lifetimeMin: 0.8,
+    lifetimeMax: 1.8,
+    speedMin: 0.8,
+    speedMax: 2.0,
+    direction: Vector3(0, 1, 0),
+    spread: 0.45,
+    spawnRadius: 0.35,
+    gravity: Vector3(0, 0.4, 0),
+    startColor: 0xffe066,
+    endColor: 0xff3300,
+    size: 0.14
+});
+scene.addObject(bonfireEmbers);
+
+// One-shot burst sparks for crate kicks (persistent so rapid kicks don't teleport existing sparks)
+const hitSparks = new ParticleEmitter({
+    maxParticles: 200,
+    rate: 0,
+    emitting: false,
+    persistent: true,
+    lifetimeMin: 0.25,
+    lifetimeMax: 0.55,
+    speedMin: 3.0,
+    speedMax: 7.0,
+    direction: Vector3(0, 1, 0),
+    spread: 1.2,
+    gravity: Vector3(0, -14, 0),
+    startColor: 0xffffaa,
+    endColor: 0xff5500,
+    size: 0.12
+});
+scene.addObject(hitSparks);
+
 // Player Capsule with Unity-style CharacterController child (auto-switches bodyType to "kinematicPosition")
 const playerMesh = new THREE.Mesh(
     new THREE.CapsuleGeometry(0.4, 1.0, 8, 16),
@@ -135,6 +180,52 @@ const playerCC = new CharacterController("PlayerCC")
 
 player.addChild(playerCC);
 scene.addObject(player);
+
+/** AIGEN
+ * prompt: add more scenarios in the scene to test followTarget persistent trail
+ */
+// Persistent trail following the player's feet
+const playerTrail = new ParticleEmitter({
+    maxParticles: 150,
+    rate: 30,
+    persistent: true,
+    followTarget: player,
+    followOffset: Vector3(0, -0.75, 0),
+    lifetimeMin: 0.35,
+    lifetimeMax: 0.75,
+    speedMin: 0.1,
+    speedMax: 0.4,
+    direction: Vector3(0, 1, 0),
+    spread: 0.8,
+    spawnRadius: 0.15,
+    gravity: Vector3(0, 0.2, 0),
+    startColor: 0x38bdf8,
+    endColor: 0x1e3a8a,
+    size: 0.11
+});
+scene.addObject(playerTrail);
+
+/** AIGEN
+ * prompt: make one more trail that's not persistent for the player to test the local space particles
+ */
+// Non-persistent (local-space) aura parented directly to player via addChild()
+const playerAura = new ParticleEmitter({
+    maxParticles: 80,
+    rate: 20,
+    persistent: false,
+    lifetimeMin: 0.4,
+    lifetimeMax: 0.8,
+    speedMin: 0.3,
+    speedMax: 0.8,
+    direction: Vector3(0, 1, 0),
+    spread: 0.5,
+    spawnRadius: 0.45,
+    gravity: Vector3(0, 0.2, 0),
+    startColor: 0xc084fc,
+    endColor: 0x6b21a8,
+    size: 0.12
+});
+player.addChild(playerAura);
 
 /** AIGEN
  * prompt: I got one more feature to test, the UIManager and elements, that was my teammate's work and I just merged and wired it, generate codes to test the new UIManager and UIElement feature
@@ -286,6 +377,30 @@ game.bindToUpdate((dt) => {
         console.log(`[DebugManager] enabled = ${game.Debug.enabled}`);
     }
 
+    /** AIGEN
+     * prompt: add SaveManager save/load test (K = save, R = load)
+     */
+    if (input.isKeyPressed("k")) {
+        const pos = player.getPosition();
+        game.Saves.save("testSlot", {
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            kickCount
+        });
+        console.log(`[SaveManager] Saved slot "testSlot" at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}), kicks=${kickCount}`);
+    }
+
+    if (input.isKeyPressed("r")) {
+        const saved = game.Saves.load("testSlot");
+        if (saved) {
+            player.setPosition(saved.pos.x, saved.pos.y, saved.pos.z);
+            kickCount = saved.kickCount ?? 0;
+            hudStatus.setText(`Crates Kicked: ${kickCount}`);
+            console.log(`[SaveManager] Loaded slot "testSlot"!`);
+        } else {
+            console.log(`[SaveManager] No save found in "testSlot". Press K to save first.`);
+        }
+    }
+
     // 1. Pointer Lock toggle ('L' key)
     if (input.isKeyPressed("l")) {
         if (input.isPointerLocked()) {
@@ -359,6 +474,7 @@ game.bindToUpdate((dt) => {
                 const kickDir = hit.point.clone().sub(camera.root.position).normalize();
                 hit.object.applyImpulse(Vector3(kickDir.x * 9, 4.5, kickDir.z * 9));
                 hit.object.setAngularVelocity(2, 3, -2);
+                hitSparks.setPosition(hit.point.x, hit.point.y, hit.point.z).burst(25);
                 kickCount += 1;
                 game.Event.fire("crate:kicked", kickCount);
             } else if (hit.object.static) {

@@ -114,7 +114,7 @@ export default class Game {
         this.accumulated += delta;
 
         while (this.accumulated >= this.settings.tickRate) {
-            // Check if object is destroyed
+            // Check if object is destroyed and update objects
             for (let i = this.dynamicObjects.length - 1; i >= 0; i--) {
                 const object = this.dynamicObjects[i];
 
@@ -130,6 +130,10 @@ export default class Game {
                     this.Physics.unregisterBody(object);
                     this.dynamicObjects.splice(i, 1);
                     this.Scene.currentScene.root.remove(object.root);
+                }
+
+                for (let bind of object.stepped) {
+                    bind(object, this.settings.tickRate);
                 }
             }
 
@@ -151,19 +155,27 @@ export default class Game {
                 }
             }
 
-            this.Physics.update(this.settings.tickRate, this.dynamicObjects, this.staticObjects);
-
             for (let bind of this.stepped) {
                 bind(this.settings.tickRate, this.clock);
             }
 
+            this.Physics.update(this.settings.tickRate, this.dynamicObjects, this.staticObjects);
+
+            /** AIMOD
+             * prompt: lets modify the recursive children for game class first before committing, don't forget the AIMOD tag
+             */
+            for (let object of this.dynamicObjects) {
+                this.stepObjectTree(object, this.settings.tickRate);
+            }
+
+            // USER
             this.Input.update();
 
             this.accumulated -= this.settings.tickRate;
             this.clock += this.settings.tickRate;
         }
 
-        this.Debug.update(delta, this);
+        this.Debug.update(this.settings.tickRate, this);
 
         this.renderer.render(this.Scene.currentScene.root, this.camera.root)
 
@@ -171,6 +183,28 @@ export default class Game {
 
     }
 
+    /** AIMOD
+     * prompt: lets modify the recursive children for game class first before committing, don't forget the AIMOD tag
+     */
+    stepObjectTree(obj, dt) {
+        if (!obj || obj.destroyed || !obj.enabled) {
+            return;
+        }
+
+        if (obj.stepped?.length > 0) {
+            for (let bind of obj.stepped) {
+                bind(obj, dt);
+            }
+        }
+
+        if (obj.children?.length > 0) {
+            for (let child of obj.children) {
+                this.stepObjectTree(child, dt);
+            }
+        }
+    }
+
+    // USER
     setState(state) {
         this.state = state;
     }
