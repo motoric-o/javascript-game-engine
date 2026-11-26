@@ -405,6 +405,6 @@ game.bindToUpdate((dt) => {
     }
 });
 
-game.sceneManager.addScene(scene);
+game.Scene.addScene(scene);
 game.start();
 startScenario(0);

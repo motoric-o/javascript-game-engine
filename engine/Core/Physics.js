@@ -1,5 +1,4 @@
 // USER
-import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 /** AIMOD
  * prompt: move raycastFromCamera to GameCamera and CharacterController to a child GameObject
