@@ -1,12 +1,12 @@
 import { Pathfinding } from "three-pathfinding";
 
 export default class Navigation {
-    constructor(){
+    constructor() {
         this.pathfinder = new Pathfinding()
         this.zones = new Set();
     }
 
-    loadNavMesh(zoneName, geometry){
+    loadNavMesh(zoneName, geometry) {
         if (!zoneName || !geometry?.isBufferGeometry){
             console.error("ERROR: NavMesh requires a zone name and BufferGeometry!");
             return this;
@@ -19,11 +19,11 @@ export default class Navigation {
         return this;
     }
 
-    hasZone(zoneName){
+    hasZone(zoneName) {
         return this.zones.has(zoneName);
     }
 
-    getGroup(zoneName, position){
+    getGroup(zoneName, position) {
         if(!this.hasZone(zoneName) || !position){
             console.error("ERROR: zoneName doesn't exist or position is missing!");
             return null;
@@ -32,7 +32,7 @@ export default class Navigation {
         return this.pathfinder.getGroup(zoneName, position);
     }
 
-    findPath(from, to, zoneName){
+    findPath(from, to, zoneName) {
        if (!this.hasZone(zoneName) || !from || !to){
             console.error("ERROR: zoneName doesn't exist or from/to is missing!");
             return [];
@@ -53,7 +53,7 @@ export default class Navigation {
         return wayPoint?? [];
     }
 
-    getClosestNode(position, zoneName){
+    getClosestNode(position, zoneName) {
         if(!this.hasZone(zoneName) || !position) return null;
 
         const groupID = this.getGroup(zoneName,position);
