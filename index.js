@@ -231,13 +231,13 @@ game.Event.on("crate:kicked", (count) => {
 
 player.bindOnCollision((self, other) => {
     if (other === sensorZone) {
-        game.Event.emit("checkpoint:entered");
-        game.Event.emit("checkpoint:firstVisit");
+        game.Event.fire("checkpoint:entered");
+        game.Event.fire("checkpoint:firstVisit");
     }
 });
 player.bindOnCollisionEnded((self, other) => {
     if (other === sensorZone) {
-        game.Event.emit("checkpoint:exited");
+        game.Event.fire("checkpoint:exited");
     }
 });
 
@@ -360,7 +360,7 @@ game.bindToUpdate((dt) => {
                 hit.object.applyImpulse(Vector3(kickDir.x * 9, 4.5, kickDir.z * 9));
                 hit.object.setAngularVelocity(2, 3, -2);
                 kickCount += 1;
-                game.Event.emit("crate:kicked", kickCount);
+                game.Event.fire("crate:kicked", kickCount);
             } else if (hit.object.static) {
                 const p = hit.point;
                 const spawned = createBox({

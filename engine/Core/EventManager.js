@@ -33,7 +33,7 @@ export default class EventManager {
         return this.on(event, wrapper);
     }
 
-    emit(event, ...args) {
+    fire(event, ...args) {
         if (!this.listeners.has(event)) {
             return;
         }
