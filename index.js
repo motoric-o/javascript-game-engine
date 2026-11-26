@@ -1,30 +1,51 @@
 /** AIGEN
- * prompt: make a branch to test these new features. Make a scenario like the current index.js, but now adjusted for the new version of the engine (Rapier3D, CharacterController child GameObject, GameCamera.raycast(), sensors, slopes/stairs)
+ * prompt 1: make a branch to test these new features. Make a scenario like the current index.js, but now adjusted for the new version of the engine (Rapier3D, CharacterController child GameObject, GameCamera.raycast(), sensors, slopes/stairs)
+ * prompt 2: Before committing, update index js to test these new features (EventManager, Environment, DebugManager)
+ * prompt 3: add bonfire ember + crate-kick spark ParticleEmitter tests in index.js
+ * prompt 4: add more scenarios in the scene to test followTarget persistent trail and SaveManager save/load
+ * prompt 5: make one more trail that's not persistent for the player to test the local space particles
  */
 import * as THREE from "three";
 import Game from "./engine/Game.js";
 import GameScene from "./engine/GameObjects/Scene/GameScene.js";
+import Environment from "./engine/GameObjects/Scene/Environment.js";
 import GameCamera from "./engine/GameObjects/3D/GameCamera.js";
 import PhysicalObject from "./engine/GameObjects/3D/PhysicalObject.js";
 import CharacterController from "./engine/GameObjects/Physics/CharacterController.js";
 import Debris from "./engine/GameObjects/3D/Debris.js";
+import ParticleEmitter from "./engine/GameObjects/3D/Particle.js";
+import UIElement from "./engine/GameObjects/UI/UIElement.js";
 import { Vector3, clamp } from "./engine/Util/Math.js";
 
 const game = new Game({
     clearColor: 0x16162a,
-    startScene: "rapier-test"
+    startScene: "rapier-test",
+    debug: true
 });
 await game.init();
 
 const camera = new GameCamera();
-const scene = new GameScene("rapier-test", camera);
 
-// Lighting
-const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-dirLight.position.set(10, 18, 12);
-dirLight.castShadow = true;
-scene.root.add(ambient, dirLight);
+// Environment (Lighting + Fog + Background)
+const env = new Environment()
+    .setBackground(new THREE.Color(0x16162a))
+    .setFog(0x16162a, 14, 42);
+
+env.addAmbientLight(0x9ca3af, 0.45);
+const sunLight = env.addDirectionalLight(0xfff1e0, 1.25, Vector3(10, 18, 12), {
+    castShadow: true,
+    mapSize: 2048,
+    extent: 20
+});
+// Warm bonfire-style PointLight at the checkpoint sensor zone
+env.addPointLight(0xff7b29, 3.0, Vector3(0, 1.4, -7), 12, 2, true);
+
+// DebugManager helpers
+game.Debug.addGrid(28, 28);
+game.Debug.addAxes(3);
+game.Debug.addShadowHelper(sunLight);
+
+const scene = new GameScene("rapier-test", camera, env);
 
 function createBox({ size = [1, 1, 1], pos = [0, 0, 0], rot = [0, 0, 0], color = 0x4cc9f0, restitution = 0.25, mass = 1, debrisTimeout = null }) {
     const mesh = new THREE.Mesh(
@@ -65,14 +86,77 @@ const ramp = createBox({
 });
 scene.addStaticObject(ramp);
 
-// Sensor Trigger Zone (e.g. Souls-like Bonfire / Checkpoint Zone)
+/** AIMOD
+ * prompt: the world doesn't have the checkpoint zone yet, can you add that so I can test it as well?
+ */
+// Sensor Trigger Zone (Souls-like Bonfire / Checkpoint Zone at z = -7)
 const sensorMesh = new THREE.Mesh(
     new THREE.BoxGeometry(3, 1.6, 3),
-    new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.3 })
+    new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        emissive: 0x22c55e,
+        emissiveIntensity: 0.35,
+        transparent: true,
+        opacity: 0.45
+    })
 );
 sensorMesh.position.set(0, 0.8, -7);
+
+// Visual bonfire marker inside the checkpoint zone so it's easy to spot
+const bonfireCore = new THREE.Mesh(
+    new THREE.ConeGeometry(0.35, 1.1, 6),
+    new THREE.MeshStandardMaterial({
+        color: 0xff7b29,
+        emissive: 0xff5500,
+        emissiveIntensity: 1.5
+    })
+);
+bonfireCore.position.set(0, -0.2, 0);
+sensorMesh.add(bonfireCore);
+
 const sensorZone = new PhysicalObject(sensorMesh).setCanCollide(false);
 scene.addStaticObject(sensorZone);
+
+/** AIGEN
+ * prompt: Want me to add a quick bonfire ember + crate-kick spark test in index.js before committing? / yes lets do that
+ */
+// Continuous bonfire embers at the checkpoint zone
+const bonfireEmbers = new ParticleEmitter({
+    position: Vector3(0, 0.9, -7),
+    maxParticles: 120,
+    rate: 25,
+    lifetimeMin: 0.8,
+    lifetimeMax: 1.8,
+    speedMin: 0.8,
+    speedMax: 2.0,
+    direction: Vector3(0, 1, 0),
+    spread: 0.45,
+    spawnRadius: 0.35,
+    gravity: Vector3(0, 0.4, 0),
+    startColor: 0xffe066,
+    endColor: 0xff3300,
+    size: 0.14
+});
+scene.addObject(bonfireEmbers);
+
+// One-shot burst sparks for crate kicks (persistent so rapid kicks don't teleport existing sparks)
+const hitSparks = new ParticleEmitter({
+    maxParticles: 200,
+    rate: 0,
+    emitting: false,
+    persistent: true,
+    lifetimeMin: 0.25,
+    lifetimeMax: 0.55,
+    speedMin: 3.0,
+    speedMax: 7.0,
+    direction: Vector3(0, 1, 0),
+    spread: 1.2,
+    gravity: Vector3(0, -14, 0),
+    startColor: 0xffffaa,
+    endColor: 0xff5500,
+    size: 0.12
+});
+scene.addObject(hitSparks);
 
 // Player Capsule with Unity-style CharacterController child (auto-switches bodyType to "kinematicPosition")
 const playerMesh = new THREE.Mesh(
@@ -97,16 +181,154 @@ const playerCC = new CharacterController("PlayerCC")
 player.addChild(playerCC);
 scene.addObject(player);
 
+/** AIGEN
+ * prompt: add more scenarios in the scene to test followTarget persistent trail
+ */
+// Persistent trail following the player's feet
+const playerTrail = new ParticleEmitter({
+    maxParticles: 150,
+    rate: 30,
+    persistent: true,
+    followTarget: player,
+    followOffset: Vector3(0, -0.75, 0),
+    lifetimeMin: 0.35,
+    lifetimeMax: 0.75,
+    speedMin: 0.1,
+    speedMax: 0.4,
+    direction: Vector3(0, 1, 0),
+    spread: 0.8,
+    spawnRadius: 0.15,
+    gravity: Vector3(0, 0.2, 0),
+    startColor: 0x38bdf8,
+    endColor: 0x1e3a8a,
+    size: 0.11
+});
+scene.addObject(playerTrail);
+
+/** AIGEN
+ * prompt: make one more trail that's not persistent for the player to test the local space particles
+ */
+// Non-persistent (local-space) aura parented directly to player via addChild()
+const playerAura = new ParticleEmitter({
+    maxParticles: 80,
+    rate: 20,
+    persistent: false,
+    lifetimeMin: 0.4,
+    lifetimeMax: 0.8,
+    speedMin: 0.3,
+    speedMax: 0.8,
+    direction: Vector3(0, 1, 0),
+    spread: 0.5,
+    spawnRadius: 0.45,
+    gravity: Vector3(0, 0.2, 0),
+    startColor: 0xc084fc,
+    endColor: 0x6b21a8,
+    size: 0.12
+});
+player.addChild(playerAura);
+
+/** AIGEN
+ * prompt: I got one more feature to test, the UIManager and elements, that was my teammate's work and I just merged and wired it, generate codes to test the new UIManager and UIElement feature
+ */
+// UIManager & UIElement test (HUD, Bonfire Banner, Interactive Button)
+const hudStatus = new UIElement("hudStatus", {
+    tag: "div",
+    text: "Crates Kicked: 0",
+    interactive: false,
+    style: {
+        top: "12px",
+        right: "14px",
+        padding: "8px 12px",
+        background: "rgba(15, 23, 42, 0.75)",
+        color: "#f8fafc",
+        fontFamily: "monospace",
+        fontSize: "13px",
+        borderRadius: "6px",
+        border: "1px solid rgba(148, 163, 184, 0.3)"
+    }
+});
+
+const bonfireBanner = new UIElement("bonfireBanner", {
+    tag: "div",
+    text: "BONFIRE ZONE ACTIVE",
+    interactive: false,
+    visible: false,
+    style: {
+        bottom: "48px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        padding: "10px 24px",
+        background: "rgba(0, 0, 0, 0.72)",
+        color: "#facc15",
+        fontFamily: "serif",
+        fontSize: "20px",
+        letterSpacing: "3px",
+        borderTop: "1px solid #facc15",
+        borderBottom: "1px solid #facc15"
+    }
+});
+
+const debugToggleBtn = new UIElement("debugToggleBtn", {
+    tag: "button",
+    text: "Toggle Debug (H)",
+    interactive: true,
+    style: {
+        bottom: "14px",
+        right: "14px",
+        padding: "8px 14px",
+        background: "#1e293b",
+        color: "#e2e8f0",
+        fontFamily: "monospace",
+        fontSize: "12px",
+        border: "1px solid #475569",
+        borderRadius: "6px",
+        cursor: "pointer"
+    }
+})
+    .bindClick(() => {
+        game.Debug.toggle();
+    })
+    .bindHover((el) => {
+        el.setStyle("background", "#334155");
+    })
+    .bindHoverEnd((el) => {
+        el.setStyle("background", "#1e293b");
+    });
+
+game.UIManager
+    .addElement(hudStatus)
+    .addElement(bonfireBanner)
+    .addElement(debugToggleBtn);
+
+// EventManager listeners (test on / once / emit + UIManager updates)
+let kickCount = 0;
+game.Event.on("checkpoint:entered", () => {
+    console.log("[EventManager] checkpoint:entered -> Bonfire zone active!");
+    sensorMesh.material.color.setHex(0xfacc15);
+    game.UIManager.show("bonfireBanner");
+});
+game.Event.on("checkpoint:exited", () => {
+    console.log("[EventManager] checkpoint:exited -> Left bonfire zone.");
+    sensorMesh.material.color.setHex(0x22c55e);
+    game.UIManager.hide("bonfireBanner");
+});
+game.Event.once("checkpoint:firstVisit", () => {
+    console.log("[EventManager.once] First time reaching the bonfire! (Will not fire again)");
+});
+game.Event.on("crate:kicked", (count) => {
+    console.log(`[EventManager] crate:kicked -> Total kicks: ${count}`);
+    hudStatus.setText(`Crates Kicked: ${count}`);
+});
+
 player.bindOnCollision((self, other) => {
     if (other === sensorZone) {
-        console.log("[Sensor] Entered checkpoint zone!");
-        sensorMesh.material.color.setHex(0xfacc15);
+        game.Event.fire("checkpoint:entered");
+        game.Event.fire("checkpoint:firstVisit");
     }
 });
 player.bindOnCollisionEnded((self, other) => {
     if (other === sensorZone) {
-        console.log("[Sensor] Exited checkpoint zone!");
-        sensorMesh.material.color.setHex(0x22c55e);
+        game.Event.fire("checkpoint:exited");
     }
 });
 
@@ -134,19 +356,50 @@ const GRAVITY = -22;
 const JUMP_SPEED = 8.5;
 
 console.log(
-    "[Rapier3D + CharacterController Test Controls]\n" +
+    "[Rapier3D + EventManager + Environment + DebugManager Test Controls]\n" +
     "  WASD         : Move capsule (custom CharacterController physics)\n" +
     "  Shift        : Sprint\n" +
     "  Space        : Jump (uses playerCC.grounded)\n" +
     "  Right-Drag   : Orbit camera\n" +
     "  L            : Toggle Pointer Lock\n" +
+    "  H            : Toggle DebugManager (overlay, Rapier wireframes, grid/axes/shadow helpers)\n" +
     "  Scroll Wheel : Zoom camera\n" +
-    "  Left-Click   : camera.raycast() (kick crate via applyImpulse or spawn Debris)\n" +
-    "  Try walking up the stairs (left), ramp (right), and green sensor zone (back)!"
+    "  Left-Click   : camera.raycast() (kick crate via applyImpulse + emit event, or spawn Debris)\n" +
+    "  Try walking up the stairs (left), ramp (right), and lit bonfire sensor zone (back)!"
 );
 
 game.bindToUpdate((dt) => {
-    const input = game.inputManager;
+    const input = game.Input;
+
+    // 0. DebugManager toggle ('H' key)
+    if (input.isKeyPressed("h")) {
+        game.Debug.toggle();
+        console.log(`[DebugManager] enabled = ${game.Debug.enabled}`);
+    }
+
+    /** AIGEN
+     * prompt: add SaveManager save/load test (K = save, R = load)
+     */
+    if (input.isKeyPressed("k")) {
+        const pos = player.getPosition();
+        game.Saves.save("testSlot", {
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            kickCount
+        });
+        console.log(`[SaveManager] Saved slot "testSlot" at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}), kicks=${kickCount}`);
+    }
+
+    if (input.isKeyPressed("r")) {
+        const saved = game.Saves.load("testSlot");
+        if (saved) {
+            player.setPosition(saved.pos.x, saved.pos.y, saved.pos.z);
+            kickCount = saved.kickCount ?? 0;
+            hudStatus.setText(`Crates Kicked: ${kickCount}`);
+            console.log(`[SaveManager] Loaded slot "testSlot"!`);
+        } else {
+            console.log(`[SaveManager] No save found in "testSlot". Press K to save first.`);
+        }
+    }
 
     // 1. Pointer Lock toggle ('L' key)
     if (input.isKeyPressed("l")) {
@@ -205,7 +458,7 @@ game.bindToUpdate((dt) => {
             z: moveDir.z * dt
         };
 
-        playerCC.controller.computeColliderMovement(player.collider, desiredTranslation);
+        playerCC.controller.computeColliderMovement(player.collider, desiredTranslation, 8);
         const corrected = playerCC.controller.computedMovement();
         const pos = player.rigidBody.translation();
         player.setPosition(pos.x + corrected.x, pos.y + corrected.y, pos.z + corrected.z);
@@ -221,7 +474,9 @@ game.bindToUpdate((dt) => {
                 const kickDir = hit.point.clone().sub(camera.root.position).normalize();
                 hit.object.applyImpulse(Vector3(kickDir.x * 9, 4.5, kickDir.z * 9));
                 hit.object.setAngularVelocity(2, 3, -2);
-                console.log("Kicked crate via camera.raycast() + applyImpulse!");
+                hitSparks.setPosition(hit.point.x, hit.point.y, hit.point.z).burst(25);
+                kickCount += 1;
+                game.Event.fire("crate:kicked", kickCount);
             } else if (hit.object.static) {
                 const p = hit.point;
                 const spawned = createBox({
@@ -249,5 +504,5 @@ game.bindToUpdate((dt) => {
     camera.lookAt(Vector3(target.x, target.y + 0.4, target.z));
 });
 
-game.sceneManager.addScene(scene);
+game.Scene.addScene(scene);
 game.start();

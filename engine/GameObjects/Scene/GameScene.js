@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import GameCamera from "../3D/GameCamera.js";
+import Environment from "./Environment.js";
 
 export default class GameScene {
-    constructor(name, camera) {
+    constructor(name, camera, environment) {
         this.name = name;
 
         this.root = new THREE.Scene();
         this.camera = camera || new GameCamera();
-
+        this.environment = environment || new Environment();
         
         this.data = new Map();
         
@@ -26,6 +27,11 @@ export default class GameScene {
         this.camera = camera;
         this.addObject(this.camera);
 
+        return this;
+    }
+
+    setEnvironment(environment) {
+        this.environment = environment;
         return this;
     }
 

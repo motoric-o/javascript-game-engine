@@ -93,7 +93,7 @@ console.log(
 );
 
 game.bindToUpdate((dt) => {
-    const input = game.inputManager;
+    const input = game.Input;
 
     // 1. Pointer Lock toggle ('L' key)
     if (input.isKeyPressed("l")) {
@@ -193,5 +193,5 @@ game.bindToUpdate((dt) => {
     camera.lookAt(Vector3(target.x, target.y + 0.4, target.z));
 });
 
-game.sceneManager.addScene(scene);
+game.Scene.addScene(scene);
 game.start();

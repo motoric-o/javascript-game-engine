@@ -1,10 +1,11 @@
 // USER
-import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 /** AIMOD
  * prompt: move raycastFromCamera to GameCamera and CharacterController to a child GameObject
  */
 import { Box3, Quaternion, Vector3 } from "../Util/index.js";
+import ParticleEmitter from "../GameObjects/3D/Particle.js";
+import PhysicalObject from "../GameObjects/3D/PhysicalObject.js";
 
 // USER
 export default class Physics {
@@ -34,7 +35,7 @@ export default class Physics {
      * box/sphere/capsule/trimesh/convexHull colliders, KinematicCharacterController, collision events, blacklists, and raycasting)
      */
     registerBody(obj) {
-        if (!this.isReady || obj == null || obj.rigidBody != null || obj.root == null) {
+        if (!this.isReady || obj == null || obj.rigidBody != null || obj.root == null || !(obj instanceof PhysicalObject)) {
             return null;
         }
 
@@ -295,6 +296,10 @@ export default class Physics {
 
         // 1. Pre-step: register new dynamic objects, run stepped callbacks, apply targets & kinematic transforms
         for (const obj of dynamicObjects) {
+            if (obj instanceof ParticleEmitter) {
+                continue;
+            }
+
             if (!obj.rigidBody && !obj.destroyed) {
                 this.registerBody(obj);
             }
@@ -305,10 +310,6 @@ export default class Physics {
                 } else if (!obj.characterController.controller) {
                     this.initCharacterController(obj);
                 }
-            }
-
-            for (const bind of obj.stepped) {
-                bind(obj, dt);
             }
 
             // TargetPosition / TargetAngle interpolation (works for cameras, kinematic platforms, etc.)

@@ -51,28 +51,34 @@ export default class SceneManager {
                 bind(this.currentScene);
             }
             for (let obj of this.currentScene.dynamicObjects) {
-                game.physics.unregisterBody(obj);
+                game.Physics.unregisterBody(obj);
             }
             for (let obj of this.currentScene.staticObjects) {
-                game.physics.unregisterBody(obj);
+                game.Physics.unregisterBody(obj);
             }
             game.stepped = game.stepped.filter(item => !this.currentScene.stepped.includes(item));
             game.dynamicObjects = game.dynamicObjects.filter(item => !this.currentScene.dynamicObjects.includes(item));
             game.staticObjects = game.staticObjects.filter(item => !this.currentScene.staticObjects.includes(item));
+            
+            this.currentScene.environment?.clear(this.currentScene);
+            game.Debug.detachFromScene(this.currentScene);
         }
+
+        nextScene.environment?.apply(nextScene);
+        game.Debug.attachToScene(nextScene);
 
         this.currentScene = nextScene;
 
         game.camera = this.currentScene.camera;
-        game.camera.setPhysics(game.physics);
+        game.camera.setPhysics(game.Physics);
         game.camera.onResize(game.settings.width, game.settings.height);
 
         for (let object of game.dynamicObjects) {
             if (object.root?.isObject3D) {
                 this.currentScene.root.add(object.root);
             }
-            if (game.physics.isReady && !object.rigidBody) {
-                game.physics.registerBody(object);
+            if (game.Physics.isReady && !object.rigidBody) {
+                game.Physics.registerBody(object);
             }
         }
 
@@ -80,20 +86,20 @@ export default class SceneManager {
             if (object.root?.isObject3D) {
                 this.currentScene.root.add(object.root);
             }
-            if (game.physics.isReady && !object.rigidBody) {
-                game.physics.registerBody(object);
+            if (game.Physics.isReady && !object.rigidBody) {
+                game.Physics.registerBody(object);
             }
         }
 
         const activeDyn = this.currentScene.dynamicObjects.filter(o => !o.destroyed);
         const activeStat = this.currentScene.staticObjects.filter(o => !o.destroyed);
 
-        if (game.physics.isReady) {
+        if (game.Physics.isReady) {
             for (let obj of activeDyn) {
-                game.physics.registerBody(obj);
+                game.Physics.registerBody(obj);
             }
             for (let obj of activeStat) {
-                game.physics.registerBody(obj);
+                game.Physics.registerBody(obj);
             }
         }
 
